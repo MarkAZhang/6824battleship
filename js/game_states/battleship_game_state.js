@@ -17,6 +17,8 @@ function BattleshipGameState() {
 
   this.show_opponent_markers = false;
 
+  this.client=new Client(numPlayers, io, cid);
+
   print("Place ships by dragging and dropping. SPACEBAR to rotate ship. ENTER to confirm")
 
 }
@@ -159,9 +161,17 @@ BattleshipGameState.prototype.on_mouse_dbl_click  = function(pos) {
 
       this.board.fired(loc)
       print("FIRED at ("+loc.x+","+loc.y+"). Awaiting result.");
+      var data=new Object();
+      data.current_ship=this.current_ship;
+      data.loc=loc;
+      data.cid=this.client.cid;
+
+      var actionObject=new ActionObject(0, 'initial',data,false);
+      this.client.sendAction(actionObject, Math.random())
+
 
       var _this = this;
-
+      /*
       setTimeout(function() {
         if(Math.random() < 0.5) {
           _this.board.hit(loc, "Fred")
@@ -171,7 +181,7 @@ BattleshipGameState.prototype.on_mouse_dbl_click  = function(pos) {
           _this.board.miss(loc)
           print("MISS at ("+loc.x+","+loc.y+")");
         }
-      }, 1000)
+      }, 1000)*/
     }
   }
 }

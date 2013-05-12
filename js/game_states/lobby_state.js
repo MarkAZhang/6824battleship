@@ -15,6 +15,10 @@ function LobbyState() {
   this.timers["request_game_start"] = 0
   var _this = this;
   io.on("status", function(data){process_num_players(data, _this)})
+  io.on('new game', function(data){
+    cid=data.cid;
+    numPlayers=data.num_players;
+  })
   this.state = "unknown"
 }
 

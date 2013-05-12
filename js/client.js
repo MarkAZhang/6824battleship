@@ -24,16 +24,15 @@ function ActionObject(cid, type, data, committed){
 }
 
 
-//function Client(me, numPlayers, serverTime, server, socket, cid){
+//function Client(numPlayers, io, cid){
 // we don't need other servers. The central server will handle that for us. We only communicate with central server.
 
-function Client(cid) {
+function Client(numPlayers, io, cid){
   //const values for client
   this.startTime=new Date().getTime()/1000;
   this.cid=cid;
-  this.me=me;
-  this.server=server;
-  this.socket=socket;
+  this.io=io;
+  this.numPlayers=numPlayers;
 
   //array of actionObject's
   this.log=new Array();
@@ -47,7 +46,7 @@ function Client(cid) {
   
   this.versionVector=new Array();
   //initialize version vector
-  for (var i=0; i<numPlayers; i++){
+  for (var i=0; i<this.numPlayers; i++){
     this.versionVector[i]=0;
   }
 
@@ -160,7 +159,6 @@ function Client(cid) {
     return this.gameState;
   }
 
-  this.io=io.connect();
   this.io.on('server response', function(data){receiveDataFromServer(data)})
   var tick=setInterval(function(){sendActionsToServer()},1000);
   
