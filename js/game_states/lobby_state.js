@@ -18,6 +18,7 @@ function LobbyState() {
   io.on('new game', function(data){
     cid=data.cid;
     numPlayers=data.num_players;
+    switch_game_state(new BattleshipGameState(cid,numPlayers));
   })
 
   this.state = "unknown"

@@ -2,7 +2,7 @@ BattleshipGameState.prototype = new GameState
 
 BattleshipGameState.prototype.constructor = BattleshipGameState
 
-function BattleshipGameState() {
+function BattleshipGameState(cid, numPlayers) {
   bg_initialized = false
   water_color = "#9999ff"
   this.board = new Board(15, 15)
