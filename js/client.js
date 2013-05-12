@@ -59,14 +59,14 @@ function Client(me, numPlayers, serverTime, server, socket, cid){
 
   //If the server has not yet responded, actions returns the same object that was passed into sendAction(). If the server has responded, the object will be modified. The object may change several times if the action changes several times on the server due to reconnects.
   function getUpdatedActionObject(uuid){
-    if responses[uuid]==false{
-      for(var i=0; i<this.queue.length){
+    if (responses[uuid]==false){
+      for(var i=0; i<this.queue.length; i++){
         if(this.queue[i].uuid==auuid){
           return this.queue[i];
         }
       }
     }else{
-      for(var i=0; i<this.log.length){
+      for(var i=0; i<this.log.length; i++){
         if(this.log[i].uuid==uuid){
           return this.log[i];
         }
@@ -116,7 +116,7 @@ function Client(me, numPlayers, serverTime, server, socket, cid){
     for (actionObject in serverPacket.actionObjectArray){
       responses[actionObject.uuid]=true;
       if (actionObject.objType=='initial'){
-        for(var i=0; i<this.queue.length){
+        for(var i=0; i<this.queue.length; i++){
           if(this.queue[i].uuid==actionObject.uuid){
             this.queue.splice(i);
             break;
@@ -124,7 +124,7 @@ function Client(me, numPlayers, serverTime, server, socket, cid){
         }
         this.log.push(actionObject);
       } else if (actionObject.objType=='revision'){
-        for(var i=0; i<this.log.length){
+        for(var i=0; i<this.log.length; i++){
           if(this.log[i].uuid==actionObject.uuid){
             this.log.splice(i);
             break;
