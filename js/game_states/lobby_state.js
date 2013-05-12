@@ -21,6 +21,8 @@ LobbyState.prototype.draw = function(ctx, bg_ctx) {
 
 }
 
+LobbyState.prototype.process = function(dt) {
 
+}
 
 
