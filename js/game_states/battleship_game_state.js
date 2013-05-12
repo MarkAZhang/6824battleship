@@ -117,7 +117,8 @@ BattleshipGameState.prototype.on_key_down = function(keyCode) {
     this.current_phase = "battle"
     this.change_firing_ship(0)
     var _this = this;
-    setTimeout(function(){_this.opponent_fire()}, 1000)
+    //setTimeout(function(){_this.opponent_fire()}, 1000)
+    io.emit('placing ships', this.board.player_ships)
     print("DOUBLE CLICK to fire. Hold SPACEBAR to show visible enemy attacks.")
   }
 
