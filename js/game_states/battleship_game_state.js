@@ -121,6 +121,10 @@ BattleshipGameState.prototype.on_key_down = function(keyCode) {
     print("DOUBLE CLICK to fire. Hold SPACEBAR to show visible enemy attacks.")
   }
 
+  if(keyCode == 81) {
+    
+  }
+
   if(this.current_phase == "battle") {
     if(keyCode >= 49 && keyCode <= 53) {
       this.change_firing_ship(keyCode - 49)

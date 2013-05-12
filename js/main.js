@@ -54,7 +54,7 @@ window.onload = function() {
 
   centerCanvas()
   
-  cur_game_state = new BattleshipGameState()
+  cur_game_state = new LobbyState()
 
   step()
 
