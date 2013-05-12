@@ -108,6 +108,18 @@ function LogEntry(action, gameState) {
 // run in the background unless we don't mind returning stale information to
 // the client (i.e. log)?
 
+
+var startNewGame = function() {
+
+    //when we start a new game, input the first entry into the log
+    //which should be the initial game state and a null actionObject
+    //with a timestamp of -10,000 so that no action can precede
+    //it. we use that value because it is always less than
+    //serverTime - DC_THRESHOLD 
+
+}
+
+// return hash of actionObjects
 var actionHash = function(action) {
     var hash = 0;
     if (action === null) {
@@ -124,6 +136,8 @@ var actionHash = function(action) {
 }
 
 // Uses binary search to find the index of the log entry with value time
+//
+// return index
 var getLogIndex = function(time, lo, hi) {
     var i = Math.floor((lo + hi)/2);
     var midpoint = this.log[i]; 
@@ -140,6 +154,8 @@ var getLogIndex = function(time, lo, hi) {
     }
 };
 
+// inserts the LogEntry object into the appropriate index in the log
+// ensures that log remains ordered after insertion operation. 
 var insertLogEntry = function(entry) {
     var index = this.getLogIndex(entry.action.timestamp, 0, this.log.length);
     if (this.log[index].action.timestamp > entry.action.timestamp) {
@@ -188,6 +204,7 @@ var receiveDataFromClient = function(clientPacket) {
     var clientTime = clientPacket.clientCurrentTime;
     var vector = clientPacket.versionVector;
 //make sure received actions gets updated
+
     //update Server state
     this.lastClientTimes[cID] = clientTime;
     this.replayLog(clientTime, actionObjArr);
@@ -290,7 +307,7 @@ var replayLog = function(clientTime, actionArray) {
     }
 
     var minTSindex = this.getLogIndex(minTS, 0, this.log.length);
-    var currentGameState = this.log[minTSindex].gameState; 
+    var currentGameState = this.log[minTSindex-1].gameState; 
     var logIndex = minTSindex;
 
     while (actionArray[actionIndex].timestamp <= Math.min(clientTime, time - this.timeRef)) {
@@ -307,12 +324,13 @@ var replayLog = function(clientTime, actionArray) {
             // get proper syntax for revision checking
             if (this.log[logIndex].action.revision === false) {
                 var ok = this.updateGameState(logIndex,currentGameState);
-                logIndex += 1;
                 currentGameState = this.log[logIndex].gameState;
+                logIndex += 1;
             }
         }
         //now apply the current action object that we got out of the actionArray
-
+        //and insert the new entry into that location
+        
         var appliedAction = this.apply(actionArray[actionIndex], currentGameState);
         var entry = new LogEntry(appliedAction[0], appliedAction[1]);
         
@@ -322,16 +340,16 @@ var replayLog = function(clientTime, actionArray) {
         log1 = log1.concat(log2);
       
         this.log = log1;
-        logIndex += 1;
         currentGameState = appliedAction[1];
+        logIndex += 1;
 
         actionIndex += 1;
     } 
     while (logIndex < this.log.length) {
         if (this.log[logIndex].action.revision === false) {
             var ok = this.updateGameState(logIndex, currentGameState);
-            logIndex += 1;
             currentGameState = this.log[logIndex].gameState;
+            logIndex += 1;
         }
     }    
     for (var j = actionIndex; j < actionArray.length; j++) {
