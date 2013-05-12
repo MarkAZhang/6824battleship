@@ -54,7 +54,7 @@ window.onload = function() {
 
   centerCanvas()
   
-  cur_game_state = new LobbyState()
+  cur_game_state = new BattleshipGameState()
 
   step()
 
@@ -174,4 +174,3 @@ function getCursorPosition(e){
     return new Loc(x, y)
 
 }
-

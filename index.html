@@ -59,6 +59,7 @@
   <script src = 'js/loc.js'></script>
   <script src = 'js/ship.js'></script>
   <script src = 'js/client.js'></script>
+  <script src = '/socket.io/socket.io.js'></script>
   <link href='http://fonts.googleapis.com/css?family=Muli:300' rel='stylesheet' type='text/css'>
 
   <script type="text/javascript">
@@ -69,12 +70,13 @@
       log_container.appendChild(new_div);
       log_container.scrollTop = log_container.scrollHeight - log_container.clientHeight
     }
-
-
   </script>
 
 </head>
 <body>
+  <script type="text/javascript">
+    var io = io.connect()
+  </script>
 
   <div id = "canvas_container">
     <canvas id="canvas" tabindex='1'></canvas>

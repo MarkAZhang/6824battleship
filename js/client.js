@@ -25,7 +25,10 @@ function ActionObject(cid, type, data, committed){
 }
 
 
-function Client(me, numPlayers, serverTime, server, socket, cid){
+//function Client(me, numPlayers, serverTime, server, socket, cid){
+// we don't need other servers. The central server will handle that for us. We only communicate with central server.
+
+function Client(cid) {
   //const values for client
   this.startTime=new Date().getTime()/1000;
   this.cid=cid;
