@@ -29,7 +29,7 @@ function ActionObject(cid, type, data, committed){
 
 function Client(numPlayers, io, cid){
   //const values for client
-  this.startTime=new Date().getTime()/1000;
+  
   this.cid=cid;
   this.io=io;
   this.numPlayers=numPlayers;
@@ -49,7 +49,9 @@ function Client(numPlayers, io, cid){
   for (var i=0; i<this.numPlayers; i++){
     this.versionVector[i]=0;
   }
-
+  function setStartTime(){
+    this.startTime=new Date().getTime()/1000;
+  }
   
   //Adds actionobject to client queue with uuid and sets timestamp of action
   function sendAction(object, uuid){
