@@ -1,5 +1,4 @@
 //<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
-//<script src="//cdn.techpines.io/jquery.event.drag-2.0.js"></script>
 //<script src="/socket.io/socket.io.js"></script>
 
 //OBJECTS
