@@ -20,13 +20,12 @@ app.configure(function () {
 
 var clients = {}
 
+var game_players = {}
+
 var state = "idle"
  
 // Listen for incoming connections from clients
 sio.sockets.on('connection', function (socket) {
-    console.log(sio.sockets.clients());
-
-    console.log("CLIENT CONNECTED WITH ID "+socket.handshake.sessionID+" "+socket.id)
     if(!clients.hasOwnProperty(socket.handshake.sessionID)) {
       clients[socket.handshake.sessionID] = []
     }
@@ -36,7 +35,16 @@ sio.sockets.on('connection', function (socket) {
     socket.on('send action', receiveDataFromClient);
 
     socket.on("get status", function(data) {
-      socket.emit("status", {state: state, num_players: get_num_players()})
+      socket.emit("status", {state: state, num_players: get_num_players_in_lobby()})
+    })
+
+    socket.on("start game", function(data) {
+      if(state == "idle") {
+      console.log("STARTING GAME")
+        state = "game_in_progress"
+        start_game()
+      }
+
     })
     socket.on('disconnect', function () {
       clients[socket.handshake.sessionID].pop(socket.handshake.sessionID);
@@ -44,7 +52,41 @@ sio.sockets.on('connection', function (socket) {
     });
 });
 
+function start_game() {
+  game_players = {}
+  
+  var id_counter = 1
+  
+  for(var sessionid in clients) {
+    game_players[sessionid] = {
+    cid: id_counter
+      
+    }
+    id_counter += 1
+  }
+  send_start_game_to_players()
+}
+
+function send_start_game_to_players() {
+  sio.sockets.clients().forEach(function (socket) {
+    console.log("EMITTING TO CLIENT")
+    socket.emit("new game", {
+      cid: game_players[socket.handshake.sessionID].cid,
+      num_players: get_num_players()
+    });
+  });
+}
+
 function get_num_players() {
+  var num = 0
+  for(var sessionid in game_players) {
+    num++
+  }
+  return num
+
+}
+
+function get_num_players_in_lobby() {
   var num = 0
   for(var sessionid in clients) {
     if(clients[sessionid].length > 0) {

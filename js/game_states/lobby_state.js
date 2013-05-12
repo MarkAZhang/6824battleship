@@ -19,6 +19,7 @@ function LobbyState() {
     cid=data.cid;
     numPlayers=data.num_players;
   })
+
   this.state = "unknown"
 }
 
@@ -77,7 +78,7 @@ LobbyState.prototype.on_mouse_down = function(pos) {
   if(this.state == "idle" && this.players_connected > 1) {
     if(pos.x > canvasWidth/2 - 50 && pos.x < canvasWidth/2 + 50 &&
         pos.y > canvasHeight/2 + 75 && pos.y < canvasHeight/2 + 125)
-      this.state == "starting_game"
+      this.state = "starting_game"
   }
 
 }
@@ -86,9 +87,14 @@ LobbyState.prototype.query_players = function() {
   io.emit("get status", {})
 }
 
+LobbyState.prototype.request_game_start = function() {
+  io.emit("start game", {})
+}
+
 function process_num_players(data, lobbystate) {
   console.log("RECEIVED DATA "+data)
   lobbystate.players_connected = data.num_players
   if(this.state != "starting_game")
     lobbystate.state = data.state
 }
+
