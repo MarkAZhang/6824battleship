@@ -38,3 +38,7 @@ GameState.prototype.on_key_up = function(keyCode) {
 GameState.prototype.on_mouse_dbl_click  = function(keyCode) {
 
 }
+
+GameState.prototype.destroy = function() {
+
+}

@@ -54,7 +54,9 @@ window.onload = function() {
 
   centerCanvas()
   
-  cur_game_state = new BattleshipGameState()
+  cur_game_state = new LobbyState()
+
+  last_time = (new Date()).getTime()
 
   step()
 
@@ -115,7 +117,7 @@ function step() {
   ctx.globalAlpha = 1;
   dt = cur_time - last_time
 
-  /*cur_game_state.update(dt)*/
+  cur_game_state.update(dt)
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   cur_game_state.draw(ctx, bg_ctx);
@@ -174,3 +176,9 @@ function getCursorPosition(e){
     return new Loc(x, y)
 
 }
+
+function switch_game_state(game_state) {
+  cur_game_state.destroy()
+  cur_game_state = game_state
+}
+
