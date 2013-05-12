@@ -370,11 +370,15 @@ var replayLog = function(clientTime, actionArray) {
 var updateGameState = function(index, currentGameState) {
     var appliedAction = this.apply(this.log[logIndex].action, currentGameState);
 
+
+    //take a second look at this revision append to the end of the log
+
     if (appliedAction[0] !== null) {
         // get proper syntax for revision checking
-        appliedAction[0].revision = true;
+        //appliedAction[0].revision = true;
         var entry = new LogEntry(appliedAction[0], appliedAction[1]);
-        this.insertLogEntry(entry);
+        //this.insertLogEntry(entry);
+        this.log.concat(entry);
         this.log[index].action = appliedAction[0];
     }            
 
@@ -382,6 +386,23 @@ var updateGameState = function(index, currentGameState) {
     return true;
 } 
 
+var shipHash(shipID, cID) {
+    return shipID + cID<<3;
+}
+
 var apply = function(action, gameState) {
+    if (action.invalidated === true) {
+        return;
+    }
+    var targetX = action.target.x
+    var targetY = action.target.y
+    var sourceX = action.source.x
+    var sourceY = action.source.y 
+
+    var source = gameState[sourceY][sourceX];
+    var sourceID = shipHash(source.shipID, source.clientID);
+    
+
+    //check if source is even still alive
 
 }
