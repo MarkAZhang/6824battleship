@@ -124,13 +124,15 @@ BattleshipGameState.prototype.create_next_player_ship = function() {
 }
 
 BattleshipGameState.prototype.update = function(dt) {
- this.shot_reload_timer -= dt 
+ if(this.current_phase == "battle") {
+   
+  this.shot_reload_timer -= dt 
   if(this.shot_reload_timer < 0) {
     this.shot_reload_timer = 1000
     this.shots_left += 1
   }
   shots_left_container.innerHTML = this.shots_left
-
+ }
 
 }
 
