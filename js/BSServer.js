@@ -72,7 +72,6 @@ function BSServer() {
     this.DC_THRESHOLD = 10000;
 
     // Server methods
-    this.actionHash = actionHash;
     this.getLogIndex = getLogIndex;
     this.insertLogEntry = insertLogEntry; 
     this.isActionReceived = isActionReceived;  
@@ -80,6 +79,7 @@ function BSServer() {
     this.retrieveLogEntriesForClient = retrieveLogEntriesForClient;  
     this.replayLog = replayLog;
     this.updateGameState = updateGameState;
+    this.apply = apply;
 }
 
 function ServerPacket(entries, time, vector, gameState) {
@@ -147,6 +147,10 @@ var actionHash = function(action) {
     return hash;
 }
 
+var shipHash(shipID, cID) {
+    return shipID + cID*5;
+}
+
 // Uses binary search to find the index of the log entry with value time
 //
 // return index
@@ -200,7 +204,7 @@ var insertLogEntry = function(entry) {
 }
 
 var isActionReceived = function(action) {
-    var hash = this.actionHash(action);
+    var hash = actionHash(action);
     for (var i = 0; i < this.receivedActions.length; i++) {
         if (this.receivedActions[i] === hash) {
             return true;
@@ -226,9 +230,7 @@ var receiveDataFromClient = function(clientPacket) {
     var date = new Date();
     var time = date.getTime() - this.timeRef;
     var i = this.getLogIndex(clientTime, 0, this.log.length);
-    if (i !== -1) {
-        var srvPacket = new ServerPacket(logEntries[0], time, logEntries[1], logEntries[i-1].gameState);  
-    }
+    var srvPacket = new ServerPacket(logEntries[0], time, logEntries[1], logEntries[i-1].gameState);  
        
     //handle -1 case
     //send srvPacket to client
@@ -251,9 +253,7 @@ var retrieveLogEntriesForClient = function(verVector, cID, timestamp) {
     var logEntry = this.log[index];
     while (logEntry.action.timestamp <= timestamp) {
         if (vector[logEntry.action.cID] <= logEntry.action.timestamp) {
-            if (this.isRelevantToClient(logEntry, cid)) {
-                logEntries.concat(logEntry);    
-            }
+            logEntries.concat(logEntry);    
             vector[logEntry.action.clientID] = logEntry.action.timestamp;
         }
         logEntry = this.log[index + 1];
@@ -281,7 +281,7 @@ var replayLog = function(clientTime, actionArray) {
             this.invalidateActionObject(actionArray[i]);
             var entry = new LogEntry(actionArray[i], null);
             var ok = this.insertLogEntry(entry);
-            this.receivedActions = this.receivedActions.concat(this.actionHash(actionArray[i]));
+            this.receivedActions = this.receivedActions.concat(actionHash(actionArray[i]));
         }
     } 
     var actionIndex = 0;
@@ -295,7 +295,7 @@ var replayLog = function(clientTime, actionArray) {
         this.invalidateActionObject(actionArray[actionIndex]);
         var entry = new LogEntry(actionArray[actionIndex], null);
         var ok = this.insertLogEntry(entry);
-        this.receivedActions = this.receivedActions.concat(this.actionHash(actionArray[actionIndex]));
+        this.receivedActions = this.receivedActions.concat(actionHash(actionArray[actionIndex]));
         
         actionIndex += 1;
         
@@ -373,7 +373,7 @@ var replayLog = function(clientTime, actionArray) {
         this.invalidateActionObject(actionArray[j]);
         var entry = new LogEntry(actionArray[j], null);
         var ok = this.insertLogEntry(entry);
-        this.receivedActions = this.receivedActions.concat(this.actionHash(actionArray[j]));
+        this.receivedActions = this.receivedActions.concat(actionHash(actionArray[j]));
         
         j += 1;
     }
@@ -382,25 +382,22 @@ var replayLog = function(clientTime, actionArray) {
 var updateGameState = function(index, currentGameState) {
     var appliedAction = this.apply(this.log[logIndex].action, currentGameState);
 
-
     //take a second look at this revision append to the end of the log
 
     if (appliedAction[0] !== null) {
         // get proper syntax for revision checking
-        //appliedAction[0].revision = true;
-        var entry = new LogEntry(appliedAction[0], appliedAction[1]);
-        //this.insertLogEntry(entry);
-        this.log.concat(entry);
+        appliedAction[0].revision = true;
         this.log[index].action = appliedAction[0];
+        
+        var date = new Date();
+        appliedAction[0].timestamp = date.getTime() - this.timeRef;
+        var entry = new LogEntry(appliedAction[0], appliedAction[1]);
+        this.log.concat(entry);
     }            
 
     this.log[index].gameState = appliedAction[1];
     return true;
 } 
-
-var shipHash(shipID, cID) {
-    return shipID + cID*5;
-}
 
 var apply = function(action, gameState) {
     var rtnArray = new Array();
@@ -437,19 +434,27 @@ var apply = function(action, gameState) {
         //a ship has been hit
         var targetID = shipHash(target.shipID, target.clientID);
         var ship = this.shipArray[targetID];
-        if (ship.isAlive === 0) {
-            //target is already dead....what do we do here
-            //record something - either hit or miss
-        } else {
+        if (ship.isAlive !== 0) {
+            //target is not dead, determine if it's a true hit
+            //or if square has already been hit
+           
             if (ship.dir === "vert") {
                 var offset = targetY - ship.topLeftLoc.y;
-                var mask = ~(1<<offset);
-                ship.isAlive = ship.isAlive & mask;
             } else {
                 var offset = targetX - ship.topLeftLoc.x;
-                var mask = ~(1<<offset);
-                ship.isAlive = ship.isAlive & mask;
             }
+            
+            var mask = 1<<offset;
+            var beenHit = ship.isAlive & mask;
+            ship.isAlive = ship.isAlive & (~mask);
+          
+            if (beenHit !== 0) {
+                newGameState[targetY][targetX].hit = true;
+                newGameState[targetY][targetX].shotLocX = sourceX;
+                newGameState[targetY][targetX].shotLocY = sourceY;
+                newGameState[targetY][targetX].shotID = action.clientID;
+                newGameState[targetY][targetX].results = newGameState[targetY][targetX].results.concat("hit");
+            } 
             //record the hit in the gamestate
             //also possible that this square was already hit
             //but ship not sunk
@@ -457,6 +462,7 @@ var apply = function(action, gameState) {
         }
     } else {
         //record a miss, there was no ship there.
+        newGameState[targetY][targetX].results = newGameState[targetY][targetX].results.concat("miss");
     }
 
     rtnArray[0] = null;
