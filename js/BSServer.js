@@ -62,6 +62,8 @@ function List() {
 // BSServer
 //*************************************************
 
+exports.BSServer = BSServer
+
 function BSServer(gameBoard, ships) {
     // Server fields 
     this.log = new Array();  
@@ -144,8 +146,6 @@ var startNewGame = function() {
 
 }
 
-socket.onready
-
 // return hash of actionObjects
 var actionHash = function(action) {
     var hash = 0;
@@ -162,9 +162,8 @@ var actionHash = function(action) {
     return hash;
 }
 
-var shipHash = function(shipID, cID) {
-    return (shipID - 1) + cID*5;
-}
+function shipHash(shipID, cID) {
+    return shipID + cID*5;
 
 var shipReverseHash = function(hash) {
     return Math.floor(hash/5);
@@ -232,7 +231,7 @@ var isActionReceived = function(action) {
     return false;
 }
 
-var receiveDataFromClient = function(clientPacket) {
+var receiveDataFromClient = function(clientPacket, socket) {
     //unpack Client information
     var cID = clientPacket.clientID;
     var actionObjArr = clientPacket.actionObjectArray;
@@ -253,6 +252,10 @@ var receiveDataFromClient = function(clientPacket) {
        
     //handle -1 case
     //send srvPacket to client
+
+    socket.emit("server response", {
+      serverPacket: srvPacket
+    }
 }
 
 var retrieveLogEntriesForClient = function(verVector, cID, timestamp) {
@@ -306,7 +309,7 @@ var replayLog = function(clientTime, actionArray) {
     var actionIndex = 0;
     //remove early/illegal objects
     while (actionArray[actionIndex].timestamp <= this.lastClientTimes[actionArray[actionIndex].clientID]) {
-        if (this.isActionReceived(actionArray[actionIndex]) {
+        if (this.isActionReceived(actionArray[actionIndex])) {
             actionIndex += 1;
             continue;
         } 
@@ -384,7 +387,7 @@ var replayLog = function(clientTime, actionArray) {
         }
     }    
     for (var j = actionIndex; j < actionArray.length; j++) {
-        if (this.isActionReceived(actionArray[j]) {
+        if (this.isActionReceived(actionArray[j])){
             j += 1;
             continue;
         } 
@@ -444,7 +447,7 @@ var apply = function(action, gameState) {
     }   
     
     var target = gameState[targetX][targetY];
-    if target.cid === action.clientID) {
+    if (target.cid === action.clientID) {
         rtnArray[0] = null;
         rtnArray[1] = newGameState;
         return rtnArray;

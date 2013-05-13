@@ -98,7 +98,16 @@ LobbyState.prototype.request_game_start = function() {
 function process_num_players(data, lobbystate) {
   console.log("RECEIVED DATA "+data)
   lobbystate.players_connected = data.num_players
-  if(this.state != "starting_game")
+  if(this.state != "starting_game") {
     lobbystate.state = data.state
+
+    if(data.state == "game_in_progress" && data.is_player == true) {
+      var cid = data.cid
+      var numPlayers = data.num_players
+      var ships_placed = data.ships_placed
+
+      switch_game_state(new BattleshipGameState(cid,numPlayers,ships_placed));
+    }
+  }
 }
 

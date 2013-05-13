@@ -6,6 +6,7 @@ var express = require('express'),
 
 var cookie = require('cookie');
 var connect = require('connect');
+var BSServer = require('./js/BSServer.js').BSServer
 
 server.listen(8080)
 
@@ -27,6 +28,8 @@ var state = "idle"
 var game_status = "none"
 
 var game_state = {}
+
+var bs_server = null
  
 // Listen for incoming connections from clients
 sio.sockets.on('connection', function (socket) {
@@ -39,7 +42,15 @@ sio.sockets.on('connection', function (socket) {
     socket.on('send action', receiveDataFromClient);
 
     socket.on("get status", function(data) {
-      socket.emit("status", {state: state, num_players: get_num_players_in_lobby()})
+      // game started and this player is part of it
+      if(state == "game_in_progress" && game_status == "placing_ships" && game_players.hasOwnProperty(socket.handshake.sessionID)) {
+        socket.emit("status", {state: state, num_players: get_num_players(), is_player: true, cid: game_players[socket.handshake.sessionID].cid, ships_placed: null})
+      } else if(state == "game_in_progress" && game_status == "battle" && game_players.hasOwnProperty(socket.handshake.sessionID)) {
+        socket.emit("status", {state: state, num_players: get_num_players(), is_player: true, cid: game_players[socket.handshake.sessionID].cid, ships_placed: game_players[socket.handshake.sessionID].ships})
+      } else {
+        socket.emit("status", {state: state, num_players: get_num_players_in_lobby(), is_player: false})
+      }
+
     })
 
     socket.on("start game", function(data) {
@@ -56,9 +67,14 @@ sio.sockets.on('connection', function (socket) {
       }
     })
 
+    socket.on("send action", function(data) {
+      if(state == "game_in_progress" && game_status == "battle" && game_players.hasOwnProperty(socket.handshake.sessionID)) {
+        bs_server.receiveDataFromClient(data.clientPacket, socket);
+      }
+    });
+
     socket.on('disconnect', function () {
       clients[socket.handshake.sessionID].pop(socket.handshake.sessionID);
-      console.log('DISCONNESSO!!! '+socket.handshake.sessionID);
     });
 });
 
@@ -101,7 +117,11 @@ function start_battle() {
     for(var j = 0; j < 15; j++) {
       row.push({
         cid: -1,
-        shipid: -1
+        shipid: -1,
+        hit: false,
+        shotLocX: null,
+        shotLocY: null,
+        shotcid: null
       })
     }
     game_state.board.push(row)
@@ -115,13 +135,25 @@ function start_battle() {
         var loc = locs[i]
         game_state.board[loc.x][loc.y] = {
           cid:  game_players[sessionid].cid,
-          shipid: ship.ship_id
+          shipid: ship.ship_id,
+          hit: false,
+          shotLocX: null,
+          shotLocY: null,
+          shotcid: null
         }
       }
     }
   }
-  //initialize server
 
+  var starting_ships = {}
+  for(sessionid in game_players) {
+    var cid = game_players[sessionid].cid
+    starting_ships[cid] = game_players[sessionid].ships
+  }
+
+  //initialize server
+  bs_server = new BSServer(game_state.board, starting_ships)
+  
   sio.sockets.clients().forEach(function (socket) {
     console.log("EMITTING START BATTLE TO CLIENT")
     socket.emit("play battleship", {});
@@ -144,6 +176,7 @@ function process_place_ships(data, this_sessionid) {
       var this_ship = data.ships[i]
       var valid = true
       for(sessionid in game_players) {
+        if(sessionid == this_sessionid) continue
         for(j in game_players[sessionid].ships) {
           var ship = game_players[sessionid].ships[j]
           // if it intersects a ship
@@ -168,6 +201,7 @@ function process_place_ships(data, this_sessionid) {
   // send any conflicts
   for(var sessionid in game_players) {
     if(ships_to_be_redone[sessionid].length > 0) {
+      console.log("SENDING CONFLICT")
       send_message_to_client_with_id(sessionid, "replace_ship", {bad_ship_ids: ships_to_be_redone[sessionid]})
       done = false
     }
@@ -180,6 +214,7 @@ function process_place_ships(data, this_sessionid) {
 
         // missing a ship
         if(game_players[sessionid].ships[ship] == null) {
+          console.log("MISSING SHIP "+sessionid+" "+ship)
           done = false
         }
       }
@@ -189,7 +224,6 @@ function process_place_ships(data, this_sessionid) {
   if(done) {
     start_battle()
   }
-
 }
 
 function intersects_ship(ship_one, ship_two) {
