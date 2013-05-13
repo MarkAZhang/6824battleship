@@ -3,7 +3,7 @@
 
 //OBJECTS
 function ClientPacket(startTime, actionObjects, versionVector, cid){
-  var time=new Date().getTime()/1000;
+  var time=new Date().getTime();
   this.currentTime=time-startTime;
   this.actionObjects=actionObjects;
   this.versionVector;
@@ -18,7 +18,7 @@ function ActionObject(cid, type, data, committed){
   this.committed=committed;
 
   function setTimestamp(startTime){
-    var time=new Date().getTime()/1000;
+    var time=new Date().getTime();
     this.timestamp=time-startTime;
   }
 }
@@ -50,7 +50,7 @@ function Client(numPlayers, io, cid){
     this.versionVector[i]=0;
   }
   function setStartTime(){
-    this.startTime=new Date().getTime()/1000;
+    this.startTime=new Date().getTime();
   }
   
   //Adds actionobject to client queue with uuid and sets timestamp of action
@@ -108,7 +108,7 @@ function Client(numPlayers, io, cid){
 
   function sendActionsToServer(client) {
     var data=new Object();
-    data.clientPacket=new ClientPacket(client.startTime, client.queue, client.versionVector, client.cid)
+    data.clientPacket=new ClientPacket(client.startTime, client.queue, client.versionVector, client.cid);
     client.io.emit('send action', data);
 
   }
