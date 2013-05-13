@@ -79,7 +79,7 @@ LobbyState.prototype.update = function(dt) {
 }
 
 LobbyState.prototype.on_mouse_down = function(pos) {
-  if(this.state == "idle" && this.players_connected > 1) {
+  if(this.state == "idle" && this.players_connected > 0) {
     if(pos.x > canvasWidth/2 - 50 && pos.x < canvasWidth/2 + 50 &&
         pos.y > canvasHeight/2 + 75 && pos.y < canvasHeight/2 + 125)
       this.state = "starting_game"
