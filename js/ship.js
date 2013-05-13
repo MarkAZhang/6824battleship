@@ -1,11 +1,12 @@
-
-var Ship = function Ship(topLeftLoc, length, dir, board) {
+var Ship = function Ship(topLeftLoc, length, dir, board, id) {
   this.topLeftLoc = topLeftLoc
   this.length = length
   this.dir = dir // vert or horiz
   this.board = board
   this.color = "#333333"
   this.bcolor = "black"
+  this.ship_id = id
+  this.isAlive = (1<<length) - 1
 }
 
 Ship.prototype.draw = function(ctx, color, bColor) {
@@ -37,6 +38,41 @@ Ship.prototype.intersects = function(loc) {
     return loc.x == this.topLeftLoc.x && loc.y >= this.topLeftLoc.y && loc.y < this.topLeftLoc.y + this.length
   } else if(this.dir == "horiz") {
     return loc.y == this.topLeftLoc.y && loc.x >= this.topLeftLoc.x && loc.x < this.topLeftLoc.x + this.length
+  }
+}
+
+Ship.prototype.get_locs = function() {
+  var locs = []
+  if(this.dir == "vert") {
+    for(var i = 0; i < this.length; i++) {
+      locs.push(new Loc(this.topLeftLoc.x, this.topLeftLoc.y + i))
+    }
+  } else if(this.dir == "horiz") {
+    for(var i = 0; i < this.length; i++) {
+      locs.push(new Loc(this.topLeftLoc.x + i, this.topLeftLoc.y))
+    }
+  }
+  return locs;
+}
+
+Ship.prototype.intersects_ship = function(other_ship) {
+  var other_locs = other_ship.get_locs()
+
+  for(var i in other_locs) {
+    if(this.intersects(other_locs[i])) {
+      return true
+    }
+  }
+
+  return false
+}
+
+Ship.prototype.objectify = function() {
+  return {
+    topLeftLoc: this.topLeftLoc,
+    length: this.length,
+    dir: this.dir,
+    ship_id: this.ship_id
   }
 }
 

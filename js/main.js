@@ -1,4 +1,3 @@
-
 var canvasWidth, canvasHeight, sidebarWidth, boardWidth, boardHeight;
 var ctx, canvas, bg_canvas, bg_ctx
 var cur_game_state = null
