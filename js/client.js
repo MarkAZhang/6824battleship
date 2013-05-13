@@ -154,14 +154,14 @@ function Client(numPlayers, io, cid){
         }
       }
     }
-    this.serverTime=serverPacket.currentTime;
+    //this.serverTime=serverPacket.currentTime;
   }
 
   function getGameState(){
     return this.gameState;
   }
 
-  io.on('server response', function(data){receiveDataFromServer(data)})
+  this.io.on('server response', function(data){receiveDataFromServer(data)})
   var tick=setInterval(function(){sendActionsToServer()},1000);
   
 }
