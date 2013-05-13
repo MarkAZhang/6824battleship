@@ -6,6 +6,7 @@ var Ship = function Ship(topLeftLoc, length, dir, board, id) {
   this.color = "#333333"
   this.bcolor = "black"
   this.ship_id = id
+  this.isAlive = (1<<length) - 1
 }
 
 Ship.prototype.draw = function(ctx, color, bColor) {
