@@ -60,6 +60,7 @@
   <script src = 'js/ship.js'></script>
   <script src = 'js/client.js'></script>
   <script src = '/socket.io/socket.io.js'></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
   <link href='http://fonts.googleapis.com/css?family=Muli:300' rel='stylesheet' type='text/css'>
 
   <script type="text/javascript">
@@ -77,6 +78,10 @@
   <script type="text/javascript">
     var io = io.connect()
   </script>
+
+  <div id = "disconnect">
+    DISCONNECT
+  </div>
 
   <div id = "canvas_container">
     <canvas id="canvas" tabindex='1'></canvas>

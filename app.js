@@ -39,7 +39,24 @@ sio.sockets.on('connection', function (socket) {
     clients[socket.handshake.sessionID].push(socket.id)
 
     // Start listening for mouse move events
-    socket.on('send action', receiveDataFromClient);
+    socket.on('send action', receiveDataFromClient
+      //function(data){
+      //if (bs_server.lag){
+        //window.setTimeout(receiveDataFromClient(data), bs_server.lagTime);
+      //}      
+    //}
+    );
+
+    socket.on('unreliable', function(data){
+      //bs_server.setUnreliable(data.unreliable, data.unreliablePercentage);
+
+    })
+
+    socket.on('lag', function(data){
+      //bs_server.setLag(data.lag, data.lagTime);
+
+    })
+
 
     socket.on("get status", function(data) {
       // game started and this player is part of it

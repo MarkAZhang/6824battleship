@@ -76,6 +76,10 @@ function BSServer(gameBoard, ships) {
     this.DC_THRESHOLD = 100000000//10000;
     this.gameOver = false;
     this.initGame = initGame;
+    this.unreliable = false;
+    this.unreliablePercentage = 0;
+    this.lag=false;
+    this.lagTime = 0;
 
     // Server methods
     this.getLogIndex = getLogIndex;
@@ -87,6 +91,8 @@ function BSServer(gameBoard, ships) {
     this.updateGameState = updateGameState;
     this.apply = apply;
     this.invalidateActionObject = invalidateActionObject;
+    this.setUnreliable = setUnreliable;
+    this.setLag = setLag;
 
     this.initGame(gameBoard, ships);
 }
@@ -125,7 +131,14 @@ function Ship(topLeftLoc, length, dir) {
 // run in the background unless we don't mind returning stale information to
 // the client (i.e. log)?
 
-
+var setUnreliable = function(unreliable, percentage){
+    this.unreliable = unreliable;
+    this.unreliablePercentage = percentage;
+}
+var setLag = function(lag, lagTime){
+    this.lag=lag;
+    this.lagTime=lagTime;
+}
 var initGame = function(gameBoard, ships) {
     //format gameboard[x][y] 15x15;
     for (var cID in ships) {
@@ -240,6 +253,12 @@ var isActionReceived = function(action) {
 }
 
 var receiveDataFromClient = function(clientPacket, socket) {
+    
+    if (this.unreliable && Math.random() < this.unreliablePercentage){
+        console.log("Dropped client packet");
+        return false;
+    }
+
 
     console.log("UNPACKING CLIENT PACKET")
     //unpack Client information
@@ -274,9 +293,22 @@ var receiveDataFromClient = function(clientPacket, socket) {
 
     console.log("SENDING RESPONSE TO CLIENT-------------------")
 
-    socket.emit("server response", {
-      serverPacket: srvPacket
-    })
+    if (this.unreliable && Math.random() < this.unreliablePercentage){
+        console.log("Dropped response");
+        return false;
+    }
+    if (this.lag){
+        window.setTimeout(function(){
+            socket.emit("server response", {
+            serverPacket: srvPacket
+        })
+
+        },this.lagTime)
+    }else{
+        socket.emit("server response", {
+          serverPacket: srvPacket
+        })
+    }
 }
 
 var retrieveLogEntriesForClient = function(verVector, cID, timestamp) {

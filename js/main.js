@@ -2,6 +2,8 @@ var canvasWidth, canvasHeight, sidebarWidth, boardWidth, boardHeight;
 var ctx, canvas, bg_canvas, bg_ctx
 var cur_game_state = null
 var last_time
+var unreliable = false;
+var disconnect = false;
 
 window.onload = function() {
 
@@ -13,8 +15,24 @@ window.onload = function() {
   boardHeight = canvasHeight
 
   sidebarWidth = 200;
-
-
+  disconnect_container=$('#disconnect');
+  disconnect_container.val('DISCONNECT');
+  disconnect_container.height("100px");
+  disconnect_container.width("100px");
+  disconnect_container.css({
+    "position": "absolute",
+    "top": "100px",
+    "left": "100px",
+    "display": "none"
+  })
+  disconnect_container.click(function(){
+    if($(this).val() == 'DISCONNECT'){
+      $(this).val('RECONNECT');
+    } else {
+      $(this).val('DISCONNECT');
+    }
+    disconnect = !disconnect;
+  })
 
   // screen setup
   canvas = document.getElementById("canvas");
