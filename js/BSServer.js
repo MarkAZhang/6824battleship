@@ -231,7 +231,7 @@ var isActionReceived = function(action) {
     return false;
 }
 
-var receiveDataFromClient = function(clientPacket) {
+var receiveDataFromClient = function(clientPacket, socket) {
     //unpack Client information
     var cID = clientPacket.clientID;
     var actionObjArr = clientPacket.actionObjectArray;
@@ -252,6 +252,10 @@ var receiveDataFromClient = function(clientPacket) {
        
     //handle -1 case
     //send srvPacket to client
+
+    socket.emit("server response", {
+      serverPacket: srvPacket
+    }
 }
 
 var retrieveLogEntriesForClient = function(verVector, cID, timestamp) {

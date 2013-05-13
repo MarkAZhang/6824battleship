@@ -69,7 +69,7 @@ sio.sockets.on('connection', function (socket) {
 
     socket.on("send action", function(data) {
       if(state == "game_in_progress" && game_status == "battle" && game_players.hasOwnProperty(socket.handshake.sessionID)) {
-        bs_server.receiveDataFromClient(data, socket);
+        bs_server.receiveDataFromClient(data.clientPacket, socket);
       }
     });
 
