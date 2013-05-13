@@ -22,9 +22,8 @@ function ClientPacket(startTime, actionObjects, versionVector, cid){
 function ActionObject(cid, type, data, committed){
   this.data=data;
   this.cid=cid;
-  this.objType=type;
+  this.revision=type;
   this.committed=committed;
-  this.revision=false;
 
   this.setTimestamp = function(startTime){
     var time=new Date().getTime();
@@ -132,7 +131,7 @@ function Client(numPlayers, io, cid){
     
     for (actionObject in serverPacket.actionObjectArray){
       responses[actionObject.uuid]=true;
-      if (actionObject.objType=='initial'){
+      if (!actionObject.revision){
         for(var i=0; i<this.queue.length; i++){
           if(this.queue[i].uuid==actionObject.uuid){
             this.queue.splice(i,1);
@@ -140,7 +139,7 @@ function Client(numPlayers, io, cid){
           }
         }
         this.log.push(actionObject);
-      } else if (actionObject.objType=='revision'){
+      } else{
         for(var i=0; i<this.log.length; i++){
           if(this.log[i].uuid==actionObject.uuid){
             this.log.splice(i,1);

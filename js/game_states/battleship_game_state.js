@@ -205,7 +205,7 @@ BattleshipGameState.prototype.on_mouse_dbl_click  = function(pos) {
       data.cid=this.client.cid;
       data.result = "fired"
 
-      var actionObject=new ActionObject(0, 'initial',data,false);
+      var actionObject=new ActionObject(0, false,data,false);
       this.client.sendAction(actionObject, Math.random())
 
 
