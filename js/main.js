@@ -26,10 +26,10 @@ window.onload = function() {
     "display": "none"
   })
   disconnect_container.click(function(){
-    if($(this).val() == 'DISCONNECT'){
-      $(this).val('RECONNECT');
+    if($(this).html() == 'DISCONNECT'){
+      $(this).html('RECONNECT');
     } else {
-      $(this).val('DISCONNECT');
+      $(this).html('DISCONNECT');
     }
     disconnect = !disconnect;
   })
