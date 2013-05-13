@@ -53,7 +53,8 @@ function Client(numPlayers, io, cid, cids, bgamestate){
   this.lastCall=0;
   this.lastCommitted=0;
   this.dc_threshold = 10000
-    
+  this.disconnect = false;
+  
   this.gameState=null;
   this.startTime = 0;
   
@@ -130,8 +131,14 @@ function Client(numPlayers, io, cid, cids, bgamestate){
       console.log("DEBUG")
       debug_time = true
     }
-    client.io.emit('send action', data);
+    if(!client.disconnect){
+      client.io.emit('send action', data);
+    }
 
+  }
+
+  this.change_disconnect = function(){
+    this.disconnect = !this.disconnect;
   }
   //    this method is called whenever a client receives a server-packet containing data from the server. The method will update all the client data structures based on the new info from the server.
   this.receiveDataFromServer = function(serverPacket) {

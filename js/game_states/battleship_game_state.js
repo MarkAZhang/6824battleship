@@ -27,10 +27,15 @@ function BattleshipGameState(cid, numPlayers, cids, ships_placed, offset) {
   this.client=new Client(numPlayers, io, cid, cids, this);
   this.shot_reload_timer = 1000
 
+  this.disconnect=false;
+
   print("Place ships by dragging and dropping. SPACEBAR to rotate ship. ENTER to confirm")
 
   title_container.style.display = "block"
   log_container.style.display = "block"
+  disconnect_container.css("display" ,  "inline");
+  //disconnect_button_container.style.display = "block";
+
   var _this = this;
   io.on("replace_ship", function(data) {replace_ship(data, _this)});
   io.on("play battleship", function(data) {
@@ -145,6 +150,10 @@ BattleshipGameState.prototype.draw = function(ctx, bg_ctx) {
 
   this.board.draw(ctx, this.show_opponent_markers)
   ctx.globalAlpha = 1
+
+  if(this.current_phase == "battle"){
+   
+  }
 }
 
 BattleshipGameState.prototype.draw_bg_grid = function(bg_ctx) {
@@ -152,6 +161,7 @@ BattleshipGameState.prototype.draw_bg_grid = function(bg_ctx) {
   this.board.draw_grid(bg_ctx)  
   bg_ctx.restore()
 }
+
 
 BattleshipGameState.prototype.on_mouse_move = function(pos) {
   if(this.current_phase == "placing_ships" && this.current_ship != null) {
@@ -177,6 +187,12 @@ BattleshipGameState.prototype.on_mouse_down = function(pos) {
       
     }
   } else if(this.current_phase == "battle") {
+
+    if(pos.x > sidebarWidth/2 - 50 && pos.x < sidebarWidth/2 + 50 &&
+        pos.y > canvasHeight/2 + 75 && pos.y < canvasHeight/2 + 125){
+      console.error('disconnect change');
+      this.client.change_disconnect();
+    }
 
   }
 }

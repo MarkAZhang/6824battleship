@@ -26,6 +26,7 @@ function LobbyState() {
 
   title_container.style.display = "none"
   log_container.style.display = "none"
+  //disconnect_button_container.style.display = "none";
 }
 
 LobbyState.prototype.destroy = function() {
