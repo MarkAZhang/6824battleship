@@ -121,7 +121,7 @@ function Ship() {
 // the client (i.e. log)?
 
 
-var initGame(gameBoard, ships) {
+var initGame = function(gameBoard, ships) {
     //format gameboard[x][y] 15x15;
     for (var cID in ships) {
         var ship = ships[cID];
@@ -164,7 +164,7 @@ var actionHash = function(action) {
 
 function shipHash(shipID, cID) {
     return shipID + cID*5;
-
+}
 var shipReverseHash = function(hash) {
     return Math.floor(hash/5);
 }
@@ -255,7 +255,7 @@ var receiveDataFromClient = function(clientPacket, socket) {
 
     socket.emit("server response", {
       serverPacket: srvPacket
-    }
+    })
 }
 
 var retrieveLogEntriesForClient = function(verVector, cID, timestamp) {
@@ -486,7 +486,7 @@ var apply = function(action, gameState) {
                 for (var hash in this.shipArray) {
                     if (this.shipArray[hash].isAlive !== 0) {
                         //a ship that's alive
-                        if (cid !== -1 && cid !== shipReverseHash(hash))) {
+                        if (cid !== -1 && cid !== shipReverseHash(hash)) {
                             this.gameOver = false;
                             break;
                         }
