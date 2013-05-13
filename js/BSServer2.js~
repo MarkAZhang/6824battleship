@@ -534,8 +534,6 @@ function clone_shots_fired(shots_fired) {
     return new_shots_fired
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 function clone_ship_array(shipArray) {
     var newShipArray = {};
 

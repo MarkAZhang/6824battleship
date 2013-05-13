@@ -544,6 +544,12 @@ function clone_ship_array(shipArray) {
     }
     return newShipArray; 
 }
+=======
+function clone_action
+>>>>>>> 16ed5ee6c5b9ab95b3fe277ddfd312b13b5d34a4
+=======
+function clone_action
+>>>>>>> 16ed5ee6c5b9ab95b3fe277ddfd312b13b5d34a4
 
 var apply = function(action, gameState, shots_fired) {
     console.log("APPLYING")
