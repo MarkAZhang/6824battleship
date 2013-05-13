@@ -25,7 +25,11 @@ function BattleshipGameState(cid, numPlayers) {
   log_container.style.display = "block"
   var _this = this;
   io.on("replace_ship", function(data) {replace_ship(data, _this)});
-  io.on("play battleship", function(data) {console.log("PLAY BATTLESHIP")});
+  io.on("play battleship", function(data) {
+    _this.current_phase = "battle"
+    _this.change_firing_ship(0)
+      
+  });
 }
 
 BattleshipGameState.prototype.opponent_fire = function() {
@@ -122,8 +126,6 @@ BattleshipGameState.prototype.on_key_down = function(keyCode) {
   }
   if(keyCode == 13 && this.current_phase == "placing_ships") {
 
-    //this.current_phase = "battle"
-    //this.change_firing_ship(0)
     var _this = this;
     //setTimeout(function(){_this.opponent_fire()}, 1000)
 
