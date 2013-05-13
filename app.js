@@ -8,7 +8,7 @@ var cookie = require('cookie');
 var connect = require('connect');
 var BSServer = require('./js/BSServer.js').BSServer
 
-server.listen(8080)
+server.listen(9090)
 
 app.configure(function () {
     app.use(express.cookieParser());
@@ -44,9 +44,23 @@ sio.sockets.on('connection', function (socket) {
     socket.on("get status", function(data) {
       // game started and this player is part of it
       if(state == "game_in_progress" && game_status == "placing_ships" && game_players.hasOwnProperty(socket.handshake.sessionID)) {
-        socket.emit("status", {state: state, num_players: get_num_players(), is_player: true, cid: game_players[socket.handshake.sessionID].cid, ships_placed: null})
+      var cids = []
+    
+      for(var sessionid in game_players) {
+        cids.push(game_players[sessionid].cid)
+      }
+
+        socket.emit("status", {state: state, cids: cids, num_players: get_num_players(), is_player: true, cid: game_players[socket.handshake.sessionID].cid, ships_placed: null})
+
       } else if(state == "game_in_progress" && game_status == "battle" && game_players.hasOwnProperty(socket.handshake.sessionID)) {
-        socket.emit("status", {state: state, num_players: get_num_players(), is_player: true, cid: game_players[socket.handshake.sessionID].cid, ships_placed: game_players[socket.handshake.sessionID].ships})
+
+      var cids = []
+    
+      for(var sessionid in game_players) {
+        cids.push(game_players[sessionid].cid)
+      }
+
+        socket.emit("status", {state: state, num_players: get_num_players(), cids: cids, is_player: true, cid: game_players[socket.handshake.sessionID].cid, ships_placed: game_players[socket.handshake.sessionID].ships})
       } else {
         socket.emit("status", {state: state, num_players: get_num_players_in_lobby(), is_player: false})
       }
@@ -116,8 +130,8 @@ function start_battle() {
     var row = []
     for(var j = 0; j < 15; j++) {
       row.push({
-        cid: -1,
-        shipid: -1,
+        cid: null,
+        shipid: null,
         hit: false,
         shotLocX: null,
         shotLocY: null,
@@ -269,9 +283,18 @@ function send_message_to_client_with_id(sessionid, type, data) {
 function send_start_game_to_players() {
   sio.sockets.clients().forEach(function (socket) {
     console.log("EMITTING TO CLIENT")
+
+    var cids = []
+  
+    for(var sessionid in game_players) {
+      cids.push(game_players[sessionid].cid)
+    }
+    
+
     socket.emit("new game", {
       cid: game_players[socket.handshake.sessionID].cid,
-      num_players: get_num_players()
+      num_players: get_num_players(),
+      cids: cids
     });
   });
 }

@@ -2,7 +2,7 @@ BattleshipGameState.prototype = new GameState
 
 BattleshipGameState.prototype.constructor = BattleshipGameState
 
-function BattleshipGameState(cid, numPlayers, ships_placed) {
+function BattleshipGameState(cid, numPlayers, cids, ships_placed) {
   bg_initialized = false
   water_color = "#9999ff"
   this.board = new Board(15, 15)
@@ -14,7 +14,7 @@ function BattleshipGameState(cid, numPlayers, ships_placed) {
 
   this.show_opponent_markers = false;
 
-  this.client=new Client(numPlayers, io, cid);
+  this.client=new Client(numPlayers, io, cid, cids);
 
   print("Place ships by dragging and dropping. SPACEBAR to rotate ship. ENTER to confirm")
 
@@ -124,7 +124,7 @@ BattleshipGameState.prototype.on_mouse_move = function(pos) {
 BattleshipGameState.prototype.on_mouse_down = function(pos) {
   if(this.current_phase == "placing_ships") {
     this.current_ship = this.board.get_ship_at(this.board.translate_coord_to_grid(pos))
-    if(this.current_ship.status != "set") {
+    if(this.current_ship && this.current_ship.status != "set") {
       if(this.current_ship.status == "conflict") {
         this.current_ship.status = "unknown"
       }
@@ -205,7 +205,7 @@ BattleshipGameState.prototype.on_mouse_dbl_click  = function(pos) {
       data.cid=this.client.cid;
       data.result = "fired"
 
-      var actionObject=new ActionObject(0, 'initial',data,false);
+      var actionObject=new ActionObject(this.client.cid, 'initial',data,false);
       this.client.sendAction(actionObject, Math.random())
 
 

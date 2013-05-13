@@ -2,6 +2,8 @@ if(typeof exports === "undefined") {
   exports = this
 }
 
+debug_time = false
+
 exports.ActionObject = ActionObject
 
 
@@ -36,11 +38,12 @@ function ActionObject(cid, type, data, committed){
 //function Client(numPlayers, io, cid){
 // we don't need other servers. The central server will handle that for us. We only communicate with central server.
 
-function Client(numPlayers, io, cid){
+function Client(numPlayers, io, cid, cids){
   //const values for client
   
   this.cid=cid;
   this.io=io;
+  this.cids = cids;
   this.numPlayers=numPlayers;
 
   //array of actionObject's
@@ -53,11 +56,12 @@ function Client(numPlayers, io, cid){
   this.gameState=null;
   this.startTime = 0;
   
-  this.versionVector=new Array();
+  this.versionVector={}
 
   //initialize version vector
-  for (var i=0; i<this.numPlayers; i++){
-    this.versionVector[i]=0;
+  for (var i in cids){
+    var cid = cids[i];
+    this.versionVector[cid] = 0
   }
   this.setStartTime=function(){
     this.startTime=new Date().getTime();
@@ -72,7 +76,7 @@ function Client(numPlayers, io, cid){
 
   //If the server has not yet responded, actions returns the same object that was passed into sendAction(). If the server has responded, the object will be modified. The object may change several times if the action changes several times on the server due to reconnects.
   this.getUpdatedActionObject = function(uuid){
-    if (responses[uuid]==false){
+    if (this.responses[uuid]==false){
       for(var i=0; i<this.queue.length; i++){
         if(this.queue[i].uuid==auuid){
           return this.queue[i];
@@ -121,17 +125,24 @@ function Client(numPlayers, io, cid){
 
     data.clientPacket=new ClientPacket(client.startTime, client.queue, client.versionVector, client.cid)
     console.log(data.clientPacket)
+    if(data.clientPacket.actionObjects.length > 0) {
+      console.log("DEBUG")
+      debug_time = true
+    }
     client.io.emit('send action', data);
 
   }
   //    this method is called whenever a client receives a server-packet containing data from the server. The method will update all the client data structures based on the new info from the server.
   this.receiveDataFromServer = function(serverPacket) {
     console.log('serverPacket '+serverPacket.actionObjectArray);
+    if(debug_time) {
+      console.log("DEBUG")
+    }
     this.versionVector=serverPacket.versionVector;
     this.gameState=serverPacket.gameState;
     
     for (actionObject in serverPacket.actionObjectArray){
-      responses[actionObject.uuid]=true;
+      this.responses[actionObject.uuid]=true;
       if (actionObject.objType=='initial'){
         for(var i=0; i<this.queue.length; i++){
           if(this.queue[i].uuid==actionObject.uuid){

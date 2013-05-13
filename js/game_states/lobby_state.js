@@ -18,7 +18,8 @@ function LobbyState() {
   io.on('new game', function(data){
     cid=data.cid;
     numPlayers=data.num_players;
-    switch_game_state(new BattleshipGameState(cid,numPlayers));
+    cids = data.cids
+    switch_game_state(new BattleshipGameState(cid,numPlayers, cids));
   })
 
   this.state = "unknown"
@@ -105,8 +106,9 @@ function process_num_players(data, lobbystate) {
       var cid = data.cid
       var numPlayers = data.num_players
       var ships_placed = data.ships_placed
+      var cids = data.cids
 
-      switch_game_state(new BattleshipGameState(cid,numPlayers,ships_placed));
+      switch_game_state(new BattleshipGameState(cid,numPlayers,cids, ships_placed));
     }
   }
 }
