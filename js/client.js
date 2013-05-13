@@ -161,7 +161,7 @@ function Client(numPlayers, io, cid){
     return this.gameState;
   }
 
-  this.io.on('server response', function(data){receiveDataFromServer(data)})
+  io.on('server response', function(data){receiveDataFromServer(data)})
   var tick=setInterval(function(){sendActionsToServer()},1000);
   
 }
