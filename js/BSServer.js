@@ -274,9 +274,9 @@ var retrieveLogEntriesForClient = function(verVector, cID, timestamp) {
     var index = this.getLogIndex(minTS, 0, this.log.length);
     var logEntry = this.log[index];
     while (logEntry.action.timestamp <= timestamp) {
-        if (vector[logEntry.action.cID] <= logEntry.action.timestamp) {
+        if (vector[logEntry.action.data.cid] <= logEntry.action.timestamp) {
             logEntries.concat(logEntry);    
-            vector[logEntry.action.clientID] = logEntry.action.timestamp;
+            vector[logEntry.action.data.cid] = logEntry.action.timestamp;
         }
         logEntry = this.log[index + 1];
     }
@@ -308,7 +308,7 @@ var replayLog = function(clientTime, actionArray) {
     } 
     var actionIndex = 0;
     //remove early/illegal objects
-    while (actionArray[actionIndex].timestamp <= this.lastClientTimes[actionArray[actionIndex].clientID]) {
+    while (actionArray[actionIndex].timestamp <= this.lastClientTimes[actionArray[actionIndex].data.cid]) {
         if (this.isActionReceived(actionArray[actionIndex])) {
             actionIndex += 1;
             continue;
@@ -425,29 +425,27 @@ var apply = function(action, gameState) {
     var rtnArray = new Array();
     var newGameState = gameState;
 
-    if (action.invalidated === true) {
+    if (action.result = "invalidated") {
         rtnArray[0] = null;
         rtnArray[1] = newGameState;
         return rtnArray;
     }
-    var targetX = action.target.x
-    var targetY = action.target.y
-    var sourceX = action.source.x
-    var sourceY = action.source.y 
+    var targetX = action.loc.x
+    var targetY = action.loc.y
 
-    var source = gameState[sourceX][sourceY];
-    var sourceID = shipHash(source.shipid, source.cid);
+    var sourceID = shipHash(action.data.ship_id, action.data.cid);
+    var source = this.shipArray[sourceID];
     
     //check if source is even still alive
-    if (this.shipArray[sourceID].isAlive === 0) {
-        action.invalidated = true;
+    if (source.isAlive === 0) {
+        action.result = "invalidated";
         rtnArray[0] = action;
         rtnArray[1] = newGameState;
         return rtnArray;
     }   
     
     var target = gameState[targetX][targetY];
-    if (target.cid === action.clientID) {
+    if (target.cid === action.data.cid) {
         rtnArray[0] = null;
         rtnArray[1] = newGameState;
         return rtnArray;
@@ -473,9 +471,9 @@ var apply = function(action, gameState) {
           
             if (beenHit !== 0) {
                 newGameState[targetX][targetY].hit = true;
-                newGameState[targetX][targetY].shotLocX = sourceX;
-                newGameState[targetX][targetY].shotLocY = sourceY;
-                newGameState[targetX][targetY].shotcid= action.clientID;
+                newGameState[targetX][targetY].shotLocX = source.topLeftLoc.x + source.length/2;
+                newGameState[targetX][targetY].shotLocY = source.topLeftLoc.y + source.length/2;
+                newGameState[targetX][targetY].shotcid= action.data.cid;
             }
 
             this.gameOver = true;
@@ -504,4 +502,8 @@ var apply = function(action, gameState) {
     rtnArray[0] = null;
     rtnArray[1] = newGameState;
     return rtnArray;
+}
+
+var invalidateActionObject = function(action) {
+    action.result = "invalidated";
 }
