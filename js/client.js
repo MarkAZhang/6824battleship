@@ -11,7 +11,7 @@ exports.ActionObject = ActionObject
 //OBJECTS
 function ClientPacket(startTime, actionObjects, versionVector, cid){
 
-  var time=new Date().getTime()/1000;
+  var time=new Date().getTime();
   this.currentTime=time-startTime;
   this.actionObjects=actionObjects;
   this.versionVector = versionVector;
@@ -25,8 +25,8 @@ function ActionObject(cid, type, data, committed){
   this.objType=type;
   this.committed=committed;
 
-  this.setTimestamp = function(startTime){
-    var time=new Date().getTime()/1000;
+  function setTimestamp(startTime){
+    var time=new Date().getTime();
     this.timestamp=time-startTime;
   }
 }
@@ -58,8 +58,8 @@ function Client(numPlayers, io, cid){
   for (var i=0; i<this.numPlayers; i++){
     this.versionVector[i]=0;
   }
-  this.setStartTime = function(){
-    this.startTime=new Date().getTime()/1000;
+  function setStartTime(){
+    this.startTime=new Date().getTime();
   }
   
   //Adds actionobject to client queue with uuid and sets timestamp of action
@@ -120,6 +120,7 @@ function Client(numPlayers, io, cid){
 
     data.clientPacket=new ClientPacket(client.startTime, client.queue, client.versionVector, client.cid)
     console.log(data.clientPacket)
+    data.clientPacket=new ClientPacket(client.startTime, client.queue, client.versionVector, client.cid);
     client.io.emit('send action', data);
 
   }
