@@ -16,7 +16,7 @@ window.onload = function() {
 
   sidebarWidth = 200;
   disconnect_container=$('#disconnect');
-  disconnect_container.val('DISCONNECT');
+  disconnect_container.html('DISCONNECT');
   disconnect_container.height("100px");
   disconnect_container.width("100px");
   disconnect_container.css({
@@ -24,14 +24,6 @@ window.onload = function() {
     "top": "100px",
     "left": "100px",
     "display": "none"
-  })
-  disconnect_container.click(function(){
-    if($(this).html() == 'DISCONNECT'){
-      $(this).html('RECONNECT');
-    } else {
-      $(this).html('DISCONNECT');
-    }
-    disconnect = !disconnect;
   })
 
   // screen setup

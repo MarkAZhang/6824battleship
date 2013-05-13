@@ -663,7 +663,7 @@ var apply = function(action, gameState, shots_fired) {
     new_shots_fired[action.cid] += 1
     console.log("SHOTS FIRED FOR CID="+action.cid+" SHOTS="+new_shots_fired[action.cid]+" TIME="+(action.timestamp/1000))
     
-    rtnArray[0] = action;
+    rtnArray[0] = null;
     rtnArray[1] = newGameState;
     rtnArray[2] = new_shots_fired
 

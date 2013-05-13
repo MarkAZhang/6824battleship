@@ -58,6 +58,16 @@ function BattleshipGameState(cid, numPlayers, cids, ships_placed, offset) {
     this.add_ships_initial()
   }
 
+  var _this = this;
+
+  disconnect_container.click(function(){
+    if($(this).html() == 'DISCONNECT'){
+      $(this).html('RECONNECT');
+    } else {
+      $(this).html('DISCONNECT');
+    }
+    _this.client.change_disconnect()
+  })
 
 }
 
@@ -188,11 +198,11 @@ BattleshipGameState.prototype.on_mouse_down = function(pos) {
     }
   } else if(this.current_phase == "battle") {
 
-    if(pos.x > sidebarWidth/2 - 50 && pos.x < sidebarWidth/2 + 50 &&
+/*    if(pos.x > sidebarWidth/2 - 50 && pos.x < sidebarWidth/2 + 50 &&
         pos.y > canvasHeight/2 + 75 && pos.y < canvasHeight/2 + 125){
       console.error('disconnect change');
       this.client.change_disconnect();
-    }
+    }*/
 
   }
 }
