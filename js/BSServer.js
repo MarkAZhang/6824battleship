@@ -62,6 +62,9 @@ function List() {
 // BSServer
 //*************************************************
 
+Ship = require("./ship").Ship
+ActionObject = require("./client").ActionObject
+
 exports.BSServer = BSServer
 
 function BSServer(gameBoard, ships) {
@@ -73,7 +76,7 @@ function BSServer(gameBoard, ships) {
     this.timeRef = null;
     this.DC_THRESHOLD = 10000;
     this.gameOver = false;
-    this.initGame(gameBoard, ships);
+    this.initGame = initGame;
 
     // Server methods
     this.getLogIndex = getLogIndex;
@@ -84,12 +87,14 @@ function BSServer(gameBoard, ships) {
     this.replayLog = replayLog;
     this.updateGameState = updateGameState;
     this.apply = apply;
+
+    this.initGame(gameBoard, ships);
 }
 
 function ServerPacket(entries, time, vector, gameState) {
-    this.logEntries = entries;
-    this.time = time;
-    this.verVector = vector;
+    this.actionObjectArray = entries;
+    this.currentTime = time;
+    this.versionVector = vector;
     this.gameState = gameState;
 }
 
@@ -233,9 +238,9 @@ var isActionReceived = function(action) {
 
 var receiveDataFromClient = function(clientPacket, socket) {
     //unpack Client information
-    var cID = clientPacket.clientID;
-    var actionObjArr = clientPacket.actionObjectArray;
-    var clientTime = clientPacket.clientCurrentTime;
+    var cID = clientPacket.cid;
+    var actionObjArr = clientPacket.actionObjects;
+    var clientTime = clientPacket.currentTime;
     var vector = clientPacket.versionVector;
 //make sure received actions gets updated
 
@@ -308,6 +313,10 @@ var replayLog = function(clientTime, actionArray) {
     } 
     var actionIndex = 0;
     //remove early/illegal objects
+
+    if(actionArray.length == 0) {
+      return false
+    }
     while (actionArray[actionIndex].timestamp <= this.lastClientTimes[actionArray[actionIndex].clientID]) {
         if (this.isActionReceived(actionArray[actionIndex])) {
             actionIndex += 1;

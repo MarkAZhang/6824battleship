@@ -1,3 +1,11 @@
+if(typeof exports === "undefined") {
+  exports = this
+}
+
+exports.Ship = Ship
+
+
+
 var Ship = function Ship(topLeftLoc, length, dir, board, id) {
   this.topLeftLoc = topLeftLoc
   this.length = length

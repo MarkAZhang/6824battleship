@@ -1,8 +1,16 @@
+if(typeof exports === "undefined") {
+  exports = this
+}
+
+exports.ActionObject = ActionObject
+
+
 //<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
 //<script src="/socket.io/socket.io.js"></script>
 
 //OBJECTS
 function ClientPacket(startTime, actionObjects, versionVector, cid){
+
   var time=new Date().getTime()/1000;
   this.currentTime=time-startTime;
   this.actionObjects=actionObjects;
@@ -109,6 +117,8 @@ function Client(numPlayers, io, cid){
   function sendActionsToServer() {
     var data=new Object();
     data.clientPacket=new ClientPacket(this.startTime, this.queue, this.versionVector, this.cid)
+
+    console.log(data.clientPacket)
     this.io.emit('send action', data);
 
   }
