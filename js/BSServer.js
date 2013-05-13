@@ -62,6 +62,8 @@ function List() {
 // BSServer
 //*************************************************
 
+exports.BSServer = BSServer
+
 function BSServer() {
     // Server fields 
     this.log = new Array();  
@@ -129,8 +131,6 @@ var startNewGame = function() {
 
 }
 
-socket.onready
-
 // return hash of actionObjects
 var actionHash = function(action) {
     var hash = 0;
@@ -147,7 +147,7 @@ var actionHash = function(action) {
     return hash;
 }
 
-var shipHash(shipID, cID) {
+function shipHash(shipID, cID) {
     return shipID + cID*5;
 }
 
@@ -287,7 +287,7 @@ var replayLog = function(clientTime, actionArray) {
     var actionIndex = 0;
     //remove early/illegal objects
     while (actionArray[actionIndex].timestamp <= this.lastClientTimes[actionArray[actionIndex].clientID]) {
-        if (this.isActionReceived(actionArray[actionIndex]) {
+        if (this.isActionReceived(actionArray[actionIndex])) {
             actionIndex += 1;
             continue;
         } 
@@ -365,7 +365,7 @@ var replayLog = function(clientTime, actionArray) {
         }
     }    
     for (var j = actionIndex; j < actionArray.length; j++) {
-        if (this.isActionReceived(actionArray[j]) {
+        if (this.isActionReceived(actionArray[j])){
             j += 1;
             continue;
         } 
@@ -425,7 +425,7 @@ var apply = function(action, gameState) {
     }   
     
     var target = gameState[targetY][targetX];
-    if target.clientID === action.clientID) {
+    if( target.clientID === action.clientID) {
         rtnArray[0] = null;
         rtnArray[1] = newGameState;
         return rtnArray;

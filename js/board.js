@@ -75,7 +75,7 @@ Board.prototype.draw = function(ctx, show_opponent_markers) {
           if(!show_opponent_markers) {
             ctx.fillStyle = "black"
             ctx.font = "20px Century Gothic"
-            ctx.fillText("?", i*this.squareWidth + this.squareWidth/2*0.8, j*this.squareHeight + this.squareHeight/2*1.35);
+            ctx.fillText("?", i*this.squareWidth + this.squareWidth/2, j*this.squareHeight + this.squareHeight/2*1.35);
             ctx.beginPath()
             ctx.arc(i * this.squareWidth + this.squareWidth/2, j * this.squareHeight + this.squareWidth/2, this.squareWidth/4, 0, Math.PI * 2, false);
             ctx.lineWidth = 2

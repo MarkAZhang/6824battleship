@@ -2,16 +2,13 @@ BattleshipGameState.prototype = new GameState
 
 BattleshipGameState.prototype.constructor = BattleshipGameState
 
-function BattleshipGameState(cid, numPlayers) {
+function BattleshipGameState(cid, numPlayers, ships_placed) {
   bg_initialized = false
   water_color = "#9999ff"
   this.board = new Board(15, 15)
 
   this.ship_lengths = [5, 4, 3, 3, 2]
 
-  this.current_phase = "placing_ships"
-
-  this.add_ships_initial()
 
   this.drag_start_loc = null
 
@@ -30,6 +27,18 @@ function BattleshipGameState(cid, numPlayers) {
     _this.change_firing_ship(0)
       
   });
+
+  //game has already begun
+  if(ships_placed != null) {
+    this.add_placed_ships(ships_placed)
+    this.current_phase = "battle"
+    this.change_firing_ship(0)
+  } else {
+    this.current_phase = "placing_ships"
+    this.add_ships_initial()
+  }
+
+
 }
 
 BattleshipGameState.prototype.opponent_fire = function() {
@@ -59,6 +68,15 @@ BattleshipGameState.prototype.add_ships_initial = function() {
   for( i in this.ship_lengths) {
     this.board.add_ship(new Ship(new Loc(2*i, 0), this.ship_lengths[i], "vert", this.board, i+1))
   }
+}
+
+BattleshipGameState.prototype.add_placed_ships = function(ships_placed) {
+  for(i in ships_placed) {
+    var ship = ships_placed[i]
+    this.board.add_ship(new Ship(new Loc(ship.topLeftLoc.x, ship.topLeftLoc.y), ship.length, ship.dir, this.board, ship.ship_id))
+
+  }
+
 }
 
 BattleshipGameState.prototype.create_next_player_ship = function() {
