@@ -318,11 +318,13 @@ var replayLog = function(clientTime, actionArray) {
     //if disconnected for too long
     if (clientTime < time - this.timeRef - this.DC_THRESHOLD) {
         for (var i = 0; i < actionArray.length; i++) {
-            actionArray[i].timestamp = time - this.timeRef;
-            this.invalidateActionObject(actionArray[i]);
-            var entry = new LogEntry(actionArray[i], null);
-            var ok = this.insertLogEntry(entry);
-            this.receivedActions[actionArray[i].uuid] = true;
+            if(!this.receivedActions[actionArray[i].uuid]) {
+                actionArray[i].timestamp = time - this.timeRef;
+                this.invalidateActionObject(actionArray[i]);
+                var entry = new LogEntry(actionArray[i], null);
+                var ok = this.insertLogEntry(entry);
+                this.receivedActions[actionArray[i].uuid] = true;
+            }
         }
     } 
     var actionIndex = 0;
