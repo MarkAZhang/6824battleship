@@ -59,7 +59,7 @@ function Client(numPlayers, io, cid){
   for (var i=0; i<this.numPlayers; i++){
     this.versionVector[i]=0;
   }
-  function setStartTime(){
+  this.setStartTime=function(){
     this.startTime=new Date().getTime();
   }
   
@@ -121,13 +121,12 @@ function Client(numPlayers, io, cid){
 
     data.clientPacket=new ClientPacket(client.startTime, client.queue, client.versionVector, client.cid)
     console.log(data.clientPacket)
-    data.clientPacket=new ClientPacket(client.startTime, client.queue, client.versionVector, client.cid);
     client.io.emit('send action', data);
 
   }
   //    this method is called whenever a client receives a server-packet containing data from the server. The method will update all the client data structures based on the new info from the server.
   this.receiveDataFromServer = function(serverPacket) {
-    console.log('Start processing server response');
+    console.log('serverPacket '+serverPacket.actionObjectArray);
     this.versionVector=serverPacket.versionVector;
     this.gameState=serverPacket.gameState;
     
@@ -136,7 +135,7 @@ function Client(numPlayers, io, cid){
       if (actionObject.objType=='initial'){
         for(var i=0; i<this.queue.length; i++){
           if(this.queue[i].uuid==actionObject.uuid){
-            this.queue.splice(i);
+            this.queue.splice(i,1);
             break;
           }
         }
@@ -144,7 +143,7 @@ function Client(numPlayers, io, cid){
       } else if (actionObject.objType=='revision'){
         for(var i=0; i<this.log.length; i++){
           if(this.log[i].uuid==actionObject.uuid){
-            this.log.splice(i);
+            this.log.splice(i,1);
             break;
           }
         }
@@ -169,6 +168,8 @@ function Client(numPlayers, io, cid){
         }
       }
     }
+
+    console.log("QUEUE LENGTH: "+ this.queue.length);
     //this.serverTime=serverPacket.currentTime;
   }
 

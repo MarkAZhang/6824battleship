@@ -25,6 +25,7 @@ function BattleshipGameState(cid, numPlayers, ships_placed) {
   io.on("play battleship", function(data) {
     print("THE BATTLE HAS BEGUN!")
     print("DOUBLE CLICK to fire. Hold SPACEBAR to show visible enemy attacks.")
+    _this.client.setStartTime();
     _this.current_phase = "battle"
     _this.change_firing_ship(0)
       

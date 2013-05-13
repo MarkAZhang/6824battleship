@@ -71,7 +71,7 @@ function BSServer(gameBoard, ships) {
     // Server fields 
     this.log = new Array();  
     this.lastClientTimes = new Array();
-    this.receivedActions = new Array();
+    this.receivedActions = {};
     this.shipArray = new Array();
     this.timeRef = new Date().getTime();
     this.DC_THRESHOLD = 10000;
@@ -181,7 +181,7 @@ var getLogIndex = function(time, lo, hi) {
     console.log("GET LOG INDEX "+time+" "+lo+" "+hi);
     var i = Math.floor((lo + hi)/2);
     var midpoint = this.log[i]; 
-    console.log("LOG ENTRY INDEX="+i+" "+midpoint.action+" "+midpoint.gamestate)
+    //console.log("LOG ENTRY INDEX="+i+" "+midpoint.action+" "+midpoint.gameState)
     if (midpoint.action.timestamp === time) {
         return i; 
     } else if ((hi-lo) === 1) {
@@ -229,11 +229,8 @@ var insertLogEntry = function(entry) {
 }
 
 var isActionReceived = function(action) {
-    var hash = actionHash(action);
-    for (var i = 0; i < this.receivedActions.length; i++) {
-        if (this.receivedActions[i] === hash) {
-            return true;
-        }
+    if (this.receivedActions[action.uuid]){
+        return true;
     }
     return false;
 }
@@ -315,14 +312,17 @@ var replayLog = function(clientTime, actionArray) {
     
     var date = new Date()
     var time = date.getTime();
+
+
     
+    //if disconnected for too long
     if (clientTime < time - this.timeRef - this.DC_THRESHOLD) {
         for (var i = 0; i < actionArray.length; i++) {
             actionArray[i].timestamp = time - this.timeRef;
             this.invalidateActionObject(actionArray[i]);
             var entry = new LogEntry(actionArray[i], null);
             var ok = this.insertLogEntry(entry);
-            this.receivedActions = this.receivedActions.concat(actionHash(actionArray[i]));
+            this.receivedActions[actionArray[i].uuid] = true;
         }
     } 
     var actionIndex = 0;
@@ -332,6 +332,7 @@ var replayLog = function(clientTime, actionArray) {
       return false
     }
     while (actionArray[actionIndex].timestamp <= this.lastClientTimes[actionArray[actionIndex].cid]) {
+        //first check if already received
         if (this.isActionReceived(actionArray[actionIndex])) {
             actionIndex += 1;
             continue;
@@ -341,7 +342,7 @@ var replayLog = function(clientTime, actionArray) {
         this.invalidateActionObject(actionArray[actionIndex]);
         var entry = new LogEntry(actionArray[actionIndex], null);
         var ok = this.insertLogEntry(entry);
-        this.receivedActions = this.receivedActions.concat(actionHash(actionArray[actionIndex]));
+        this.receivedActions[actionArray[actionIndex].uuid] = true;
         
         actionIndex += 1;
         
@@ -354,7 +355,7 @@ var replayLog = function(clientTime, actionArray) {
     console.log("GETTING LOCATION IN LOG FOR FIRST LEGAL OBJECT")
 
     var minTS = actionArray[actionIndex].timestamp;
-
+    console.log("MINTS: "+minTS+ " clientTime " + clientTime + " diff "+ (time - this.timeRef))
     if (minTS > Math.min(clientTime, time - this.timeRef)) {
         return false;
     }
@@ -370,7 +371,8 @@ var replayLog = function(clientTime, actionArray) {
     var logIndex = minTSindex;
 
     console.log("REPLAYING LOG")
-    while (actionArray[actionIndex] && actionArray[actionIndex].timestamp <= Math.min(clientTime, time - this.timeRef)) {
+    while (actionArray[actionIndex]  && actionArray[actionIndex].timestamp <= Math.min(clientTime, time - this.timeRef)) {
+        console.log("actionArray.length "+actionArray.length)
       console.log("FAST FORWARDING, CURRENT INDEX="+actionIndex)
         if (this.isActionReceived(actionArray[actionIndex])) {
             actionIndex += 1;
@@ -396,14 +398,19 @@ var replayLog = function(clientTime, actionArray) {
         
         var appliedAction = this.apply(actionArray[actionIndex], currentGameState);
         var entry = new LogEntry(actionArray[actionIndex], appliedAction[1]);
+
         console.log("ADDING NEW LOG "+actionArray[actionIndex])
-        
+        console.log("logIndex+1 "+ (logIndex+1)+" log.length "+ this.log.length);
+        console.log("ENTRY: "+entry);
+        //this.log=this.log.splice(logIndex+1,0,entry);
         var log1 = this.log.slice(0, logIndex+1);
         var log2 = this.log.slice(logIndex+1, this.log.length);
+
         log1 = log1.concat(entry);
         log1 = log1.concat(log2);
-      
+
         this.log = log1;
+        console.log("LOG ENTRY "+ this.log[logIndex+1]);
         currentGameState = appliedAction[1];
         logIndex += 1;
 
@@ -429,14 +436,14 @@ var replayLog = function(clientTime, actionArray) {
         this.invalidateActionObject(actionArray[j]);
         var entry = new LogEntry(actionArray[j], null);
         var ok = this.insertLogEntry(entry);
-        this.receivedActions = this.receivedActions.concat(actionHash(actionArray[j]));
+        this.receivedActions[actionArray[j].uuid] = true;
         
         j += 1;
     }
 }
 
 var updateGameState = function(index, currentGameState) {
-    var appliedAction = this.apply(this.log[logIndex].action, currentGameState);
+    var appliedAction = this.apply(this.log[index].action, currentGameState);
 
     //take a second look at this revision append to the end of the log
 
