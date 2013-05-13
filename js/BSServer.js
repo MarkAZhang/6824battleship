@@ -64,7 +64,7 @@ function List() {
 
 exports.BSServer = BSServer
 
-function BSServer() {
+function BSServer(gameBoard, ships) {
     // Server fields 
     this.log = new Array();  
     this.lastClientTimes = new Array();
@@ -72,6 +72,8 @@ function BSServer() {
     this.shipArray = new Array();
     this.timeRef = null;
     this.DC_THRESHOLD = 10000;
+    this.gameOver = false;
+    this.initGame(gameBoard, ships);
 
     // Server methods
     this.getLogIndex = getLogIndex;
@@ -119,6 +121,19 @@ function Ship() {
 // the client (i.e. log)?
 
 
+var initGame(gameBoard, ships) {
+    //format gameboard[x][y] 15x15;
+    for (var cID in ships) {
+        var ship = ships[cID];
+        this.shipArray[shipHash(ship.ship_id,cID)] = ship; 
+    }
+
+    var action = new ActionObject();
+    action.timestamp = -10;
+    var entry = new LogEntry(action, gameBoard);
+    this.log[0] = entry; 
+}
+
 var startNewGame = function() {
 
     //when we start a new game, input the first entry into the log
@@ -149,6 +164,9 @@ var actionHash = function(action) {
 
 function shipHash(shipID, cID) {
     return shipID + cID*5;
+
+var shipReverseHash = function(hash) {
+    return Math.floor(hash/5);
 }
 
 // Uses binary search to find the index of the log entry with value time
@@ -413,8 +431,8 @@ var apply = function(action, gameState) {
     var sourceX = action.source.x
     var sourceY = action.source.y 
 
-    var source = gameState[sourceY][sourceX];
-    var sourceID = shipHash(source.shipID, source.clientID);
+    var source = gameState[sourceX][sourceY];
+    var sourceID = shipHash(source.shipid, source.cid);
     
     //check if source is even still alive
     if (this.shipArray[sourceID].isAlive === 0) {
@@ -424,24 +442,25 @@ var apply = function(action, gameState) {
         return rtnArray;
     }   
     
-    var target = gameState[targetY][targetX];
-    if( target.clientID === action.clientID) {
+    var target = gameState[targetX][targetY];
+    if (target.cid === action.clientID) {
         rtnArray[0] = null;
         rtnArray[1] = newGameState;
         return rtnArray;
     }
-    if (target.shipID !== null) {
+    if (target.shipid !== null) {
         //a ship has been hit
-        var targetID = shipHash(target.shipID, target.clientID);
+        var targetID = shipHash(target.shipid, target.cid);
         var ship = this.shipArray[targetID];
         if (ship.isAlive !== 0) {
             //target is not dead, determine if it's a true hit
             //or if square has already been hit
-           
+            
+            var offset = 10;
             if (ship.dir === "vert") {
-                var offset = targetY - ship.topLeftLoc.y;
+                offset = targetY - ship.topLeftLoc.y;
             } else {
-                var offset = targetX - ship.topLeftLoc.x;
+                offset = targetX - ship.topLeftLoc.x;
             }
             
             var mask = 1<<offset;
@@ -449,21 +468,34 @@ var apply = function(action, gameState) {
             ship.isAlive = ship.isAlive & (~mask);
           
             if (beenHit !== 0) {
-                newGameState[targetY][targetX].hit = true;
-                newGameState[targetY][targetX].shotLocX = sourceX;
-                newGameState[targetY][targetX].shotLocY = sourceY;
-                newGameState[targetY][targetX].shotID = action.clientID;
-                newGameState[targetY][targetX].results = newGameState[targetY][targetX].results.concat("hit");
-            } 
+                newGameState[targetX][targetY].hit = true;
+                newGameState[targetX][targetY].shotLocX = sourceX;
+                newGameState[targetX][targetY].shotLocY = sourceY;
+                newGameState[targetX][targetY].shotcid= action.clientID;
+            }
+
+            this.gameOver = true;
+
+            if (ship.isAlive === 0) {
+                //ship died, check if game over 
+                var cid = -1;
+                for (var hash in this.shipArray) {
+                    if (this.shipArray[hash].isAlive !== 0) {
+                        //a ship that's alive
+                        if (cid !== -1 && cid !== shipReverseHash(hash))) {
+                            this.gameOver = false;
+                            break;
+                        }
+                        cid = shipReverseHash(hash); 
+                    }
+                }
+            }
             //record the hit in the gamestate
             //also possible that this square was already hit
             //but ship not sunk
             //what do we do - hit or miss?
         }
-    } else {
-        //record a miss, there was no ship there.
-        newGameState[targetY][targetX].results = newGameState[targetY][targetX].results.concat("miss");
-    }
+    } 
 
     rtnArray[0] = null;
     rtnArray[1] = newGameState;
