@@ -51,6 +51,7 @@ function Client(numPlayers, io, cid, cids){
   this.responses={};
   this.lastCall=0;
   this.lastCommitted=0;
+  this.dc_threshold = 10000
     
   this.gameState=null;
   this.startTime = 0;
@@ -140,7 +141,9 @@ function Client(numPlayers, io, cid, cids){
     this.versionVector=serverPacket.versionVector;
     this.gameState=serverPacket.gameState;
     
-    for (actionObject in serverPacket.actionObjectArray){
+    for (index in serverPacket.actionObjectArray){
+      var actionObject = serverPacket.actionObjectArray[index]
+
       this.responses[actionObject.uuid]=true;
       if (!actionObject.revision){
         for(var i=0; i<this.queue.length; i++){
@@ -162,7 +165,7 @@ function Client(numPlayers, io, cid, cids){
       }
     }
     for(var i=this.lastCommitted; i< this.log.length; i++){
-      if (this.log[i].timestamp < serverPacket.currentTime){
+      if (this.log[i].timestamp < serverPacket.currentTime - this.dc_threshold){
         this.log[i].committed=true;
       }else{
         this.lastCommitted=i;
