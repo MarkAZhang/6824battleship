@@ -548,6 +548,8 @@ function clone_shots_fired(shots_fired) {
     return new_shots_fired
 }
 
+function clone_action
+
 var apply = function(action, gameState, shots_fired) {
     console.log("APPLYING")
     var rtnArray = new Array();

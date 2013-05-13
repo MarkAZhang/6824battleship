@@ -352,6 +352,9 @@ BattleshipGameState.prototype.update_log_container = function() {
         print("You have MISSED at ("+newLogEntry.data.loc.x+","+newLogEntry.data.loc.y+")")
       } else if(newLogEntry.result == "invalidated") {
         print("Your shot at ("+newLogEntry.data.loc.x+","+newLogEntry.data.loc.y+") has been invalidated. Your ship had been killed before it fired that shot.")
+      } else if(newLogEntry.revision) {
+        print("Your shot at ("+newLogEntry.data.loc.x+","+newLogEntry.data.loc.y+") has been invalidated. Your ship had been killed before it fired that shot.")
+
       }
     } else {
       if(newLogEntry.result == "hit") {
