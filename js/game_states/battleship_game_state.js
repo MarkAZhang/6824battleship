@@ -25,6 +25,7 @@ function BattleshipGameState(cid, numPlayers) {
   log_container.style.display = "block"
   var _this = this;
   io.on("replace_ship", function(data) {replace_ship(data, _this)});
+  io.on("play battleship", function(data) {console.log("PLAY BATTLESHIP")});
 }
 
 BattleshipGameState.prototype.opponent_fire = function() {

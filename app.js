@@ -122,11 +122,10 @@ function start_battle() {
   }
   //initialize server
 
-  /*sio.sockets.clients().forEach(function (socket) {
+  sio.sockets.clients().forEach(function (socket) {
     console.log("EMITTING START BATTLE TO CLIENT")
-    socket.emit("play battleship", {
-  });*/
-}
+    socket.emit("play battleship", {});
+  })
 
 }
 
@@ -166,12 +165,30 @@ function process_place_ships(data, this_sessionid) {
 
   var done = true
 
+  // send any conflicts
   for(var sessionid in game_players) {
     if(ships_to_be_redone[sessionid].length > 0) {
       send_message_to_client_with_id(sessionid, "replace_ship", {bad_ship_ids: ships_to_be_redone[sessionid]})
+      done = false
     }
   }
 
+  // check if all players have given ships
+  if(done) {
+    for(var sessionid in game_players) {
+      for(var ship in game_players[sessionid].ships) {
+
+        // missing a ship
+        if(game_players[sessionid].ships[ship] == null) {
+          done = false
+        }
+      }
+    }
+  }
+
+  if(done) {
+    start_battle()
+  }
 
 }
 
