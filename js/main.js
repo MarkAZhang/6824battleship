@@ -39,6 +39,7 @@ window.onload = function() {
   title_container.style.width = sidebarWidth + 'px';
   title_container.style.height = boardHeight + 'px';
 
+  players_container =  document.getElementById("players_container");
   ctx = canvas.getContext('2d');
   bg_ctx = bg_canvas.getContext('2d');
 

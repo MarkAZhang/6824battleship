@@ -24,6 +24,7 @@
             font-family: Muli;
             margin-top: 20px;
             display: none;
+             text-align: center;
          }
          #canvas {
             outline: none;
@@ -48,6 +49,19 @@
         }
         .log_entry:first-child {
           border-top: 0px;
+        }
+        .player {
+          font-size: 30px;
+          margin-bottom: 10px;
+          text-align: center;
+          width: 200px;
+        }
+        #players_container {
+          position: absolute;
+          bottom: 100px;
+          text-align: center;
+
+
         }
   </style>
 
@@ -87,6 +101,9 @@
 
   <div id = "title_container">
     BATTLESHIP
+    <div id = "players_container">
+
+    </div>
   </div>
 
   <div id = "log_container">

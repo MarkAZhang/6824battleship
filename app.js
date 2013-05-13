@@ -60,7 +60,8 @@ sio.sockets.on('connection', function (socket) {
         cids.push(game_players[sessionid].cid)
       }
 
-        socket.emit("status", {state: state, num_players: get_num_players(), cids: cids, is_player: true, cid: game_players[socket.handshake.sessionID].cid, ships_placed: game_players[socket.handshake.sessionID].ships})
+        socket.emit("status", {state: state, num_players: get_num_players(), cids: cids, is_player: true, cid: game_players[socket.handshake.sessionID].cid, ships_placed: game_players[socket.handshake.sessionID].ships, offset: new Date().getTime() - bs_server.timeRef
+})
       } else {
         socket.emit("status", {state: state, num_players: get_num_players_in_lobby(), is_player: false})
       }
@@ -98,11 +99,13 @@ function start_game() {
   var id_counter = 1
   
   for(var sessionid in clients) {
-    game_players[sessionid] = {
-      cid: id_counter,
-      ships: [null, null, null, null, null]
+    if(clients[sessionid].length > 0) {
+      game_players[sessionid] = {
+        cid: id_counter,
+        ships: [null, null, null, null, null]
+      }
+      id_counter += 1
     }
-    id_counter += 1
   }
 
   /*game_state = {

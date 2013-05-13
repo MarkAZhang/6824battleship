@@ -37,13 +37,14 @@ function ActionObject(cid, type, data, committed){
 //function Client(numPlayers, io, cid){
 // we don't need other servers. The central server will handle that for us. We only communicate with central server.
 
-function Client(numPlayers, io, cid, cids){
+function Client(numPlayers, io, cid, cids, bgamestate){
   //const values for client
   
   this.cid=cid;
   this.io=io;
   this.cids = cids;
   this.numPlayers=numPlayers;
+  this.bgamestate = bgamestate
 
   //array of actionObject's
   this.log=new Array();
@@ -63,8 +64,8 @@ function Client(numPlayers, io, cid, cids){
     var cid = cids[i];
     this.versionVector[cid] = 0
   }
-  this.setStartTime=function(){
-    this.startTime=new Date().getTime();
+  this.setStartTime=function(offset){
+    this.startTime=new Date().getTime() - offset;
   }
   
   //Adds actionobject to client queue with uuid and sets timestamp of action
@@ -184,6 +185,8 @@ function Client(numPlayers, io, cid, cids){
 
     console.log("QUEUE LENGTH: "+ this.queue.length);
     //this.serverTime=serverPacket.currentTime;
+    this.bgamestate.update_ui()
+
   }
 
   this.getGameState = function(){

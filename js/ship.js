@@ -21,23 +21,16 @@ var Ship = function Ship(topLeftLoc, length, dir, board, id) {
 Ship.prototype.draw = function(ctx, color, bColor) {
 
   ctx.save()
-  ctx.strokeStyle = this.bColor
+  ctx.strokeStyle = this.bcolor
   ctx.lineWidth = 3
   ctx.beginPath()
 
   if(this.dir == "horiz") {
-    ctx.fillStyle = "white"
-    ctx.fillText(this.ship_id, this.board.squareWidth * this.topLeftLoc.x + this.length/2 * this.board.squareWidth, this.board.squareHeight * this.topLeftLoc.y + this.board.squareHeight/2) 
-    ctx.beginPath()
     ctx.rect(this.board.squareWidth * this.topLeftLoc.x, this.board.squareHeight * this.topLeftLoc.y, this.length * this.board.squareWidth, this.board.squareHeight)
 
   } else if(this.dir == "vert") {
-    ctx.fillStyle = "white"
-    ctx.fillText(this.ship_id, this.board.squareWidth * this.topLeftLoc.x + this.board.squareWidth/2, this.board.squareHeight * this.topLeftLoc.y + this.length/2 * this.board.squareHeight)
-    ctx.beginPath()
     ctx.rect(this.board.squareWidth * this.topLeftLoc.x, this.board.squareHeight * this.topLeftLoc.y, this.board.squareWidth, this.length * this.board.squareHeight)
   }
-
 
   ctx.fillStyle = this.color
   if(this.status == "unknown") {
@@ -50,6 +43,16 @@ Ship.prototype.draw = function(ctx, color, bColor) {
 
   ctx.fill()
   ctx.stroke()
+  ctx.beginPath()
+  ctx.fillStyle = "white"
+  ctx.font = "30px Muli"
+  if(this.dir == "horiz") {
+    ctx.fillText(this.ship_id, this.board.squareWidth * this.topLeftLoc.x + this.length/2 * this.board.squareWidth, this.board.squareHeight * this.topLeftLoc.y + this.board.squareHeight/2 + 10) 
+
+  } else if(this.dir == "vert") {
+    ctx.fillText(this.ship_id, this.board.squareWidth * this.topLeftLoc.x + this.board.squareWidth/2, this.board.squareHeight * this.topLeftLoc.y + this.length/2 * this.board.squareHeight + 10)
+
+  }
   ctx.restore()
 }
 

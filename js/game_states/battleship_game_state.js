@@ -2,19 +2,28 @@ BattleshipGameState.prototype = new GameState
 
 BattleshipGameState.prototype.constructor = BattleshipGameState
 
-function BattleshipGameState(cid, numPlayers, cids, ships_placed) {
+function BattleshipGameState(cid, numPlayers, cids, ships_placed, offset) {
   bg_initialized = false
   water_color = "#9999ff"
-  this.board = new Board(15, 15)
+  this.board = new Board(15, 15, this)
 
   this.ship_lengths = [5, 4, 3, 3, 2]
 
+  this.cid = cid
+
+  this.other_player_colors = ["sienna", "mediumvioletred", "mediumslateblue", "green", "orangered"]
 
   this.drag_start_loc = null
 
   this.show_opponent_markers = false;
+  
+  this.cids_to_color = {}
 
-  this.client=new Client(numPlayers, io, cid, cids);
+  this.generate_colors(cids)
+
+  this.add_players_to_ui()
+
+  this.client=new Client(numPlayers, io, cid, cids, this);
 
   print("Place ships by dragging and dropping. SPACEBAR to rotate ship. ENTER to confirm")
 
@@ -25,7 +34,7 @@ function BattleshipGameState(cid, numPlayers, cids, ships_placed) {
   io.on("play battleship", function(data) {
     print("THE BATTLE HAS BEGUN!")
     print("DOUBLE CLICK to fire. Hold SPACEBAR to show visible enemy attacks.")
-    _this.client.setStartTime();
+    _this.client.setStartTime(0);
     _this.current_phase = "battle"
     _this.change_firing_ship(0)
       
@@ -36,11 +45,37 @@ function BattleshipGameState(cid, numPlayers, cids, ships_placed) {
     this.add_placed_ships(ships_placed)
     this.current_phase = "battle"
     this.change_firing_ship(0)
+    this.client.setStartTime(offset);
   } else {
     this.current_phase = "placing_ships"
     this.add_ships_initial()
   }
 
+
+}
+
+BattleshipGameState.prototype.generate_colors = function(cids) {
+
+  for(var i in cids) {
+    var cid = cids[i]
+    if(cid < this.other_player_colors.length)
+      this.cids_to_color[cid] = this.other_player_colors[cid]
+    else {
+      this.cids_to_color[cid] = "#"+Math.floor(Math.random()*242*256*256 + 16*256*256).toString(16)
+    }
+  }
+}
+
+BattleshipGameState.prototype.add_players_to_ui = function() {
+  players_container.innerHTML = ""
+  for(var cid in this.cids_to_color) {
+    if(parseInt(cid) == this.cid) {
+      players_container.innerHTML += "<div class='player' style='color:black; font-weight: bold'> ->Player "+cid+" </div>"
+
+    } else {
+      players_container.innerHTML += "<div class='player' style='color:"+this.cids_to_color[cid]+"'> Player "+cid+" </div>"
+    }
+  }
 
 }
 
@@ -76,10 +111,11 @@ BattleshipGameState.prototype.add_ships_initial = function() {
 BattleshipGameState.prototype.add_placed_ships = function(ships_placed) {
   for(i in ships_placed) {
     var ship = ships_placed[i]
-    this.board.add_ship(new Ship(new Loc(ship.topLeftLoc.x, ship.topLeftLoc.y), ship.length, ship.dir, this.board, ship.ship_id))
+      var new_ship = new Ship(new Loc(ship.topLeftLoc.x, ship.topLeftLoc.y), ship.length, ship.dir, this.board, ship.ship_id);
+    this.board.add_ship(new_ship)
+    new_ship.status = "set"
 
   }
-
 }
 
 BattleshipGameState.prototype.create_next_player_ship = function() {
@@ -235,6 +271,42 @@ BattleshipGameState.prototype.change_firing_ship = function(index) {
     this.current_ship.color = "#999999"
     this.current_ship.bcolor = "#4b4b4b"
   }
+}
+
+BattleshipGameState.prototype.update_ui = function() {
+
+  //Make the board look like the gamestate
+  this.board.clear_actions()
+  
+  var gamestate = this.client.gameState;
+
+  for(var i = 0; i < 15; i++) {
+    for(var j = 0; j < 15; j++) {
+      if(gamestate[i][j].shotcid != null) {
+        if(gamestate[i][j].shotcid == this.cid) {
+          if(gamestate[i][j].hit) {
+            this.board.hit(new Loc(i, j))
+          } else {
+            this.board.miss(new Loc(i, j))
+          }
+        } else if(gamestate[i][j].shotcid != this.cid) {
+          var angle = _atan({x: i, y: j}, {x: gamestate[i][j].shotLocX, y: gamestate[i][j].shotLocY})
+          if(gamestate[i][j].hit) {
+            this.board.opponent_hit(new Loc(i, j), gamestate[i][j].shotcid, angle)
+          } else {
+            this.board.opponent_miss(new Loc(i, j), gamestate[i][j].shotcid, angle)
+
+          }
+        }
+
+      }
+    }
+  }
+
+  console.log("HERE")
+
+
+
 }
 
 function replace_ship(data, gamestate) {

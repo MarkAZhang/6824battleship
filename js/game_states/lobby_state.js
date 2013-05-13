@@ -107,8 +107,9 @@ function process_num_players(data, lobbystate) {
       var numPlayers = data.num_players
       var ships_placed = data.ships_placed
       var cids = data.cids
+      var offset = data.offset
 
-      switch_game_state(new BattleshipGameState(cid,numPlayers,cids, ships_placed));
+      switch_game_state(new BattleshipGameState(cid,numPlayers,cids, ships_placed, offset));
     }
   }
 }

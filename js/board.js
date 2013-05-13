@@ -1,19 +1,13 @@
-var Board = function(rows, cols) {
+var Board = function(rows, cols, gamestate) {
   this.rows = rows
   this.cols = cols
+  this.gamestate = gamestate
   this.player_ships = []
 
   this.squareWidth = boardWidth/this.cols;
   this.squareHeight = boardHeight/this.rows;
 
-  this.board = []
-  for(var i = 0; i < this.rows; i++) {
-    var row = []
-    for(var j = 0; j < this.cols; j++) {
-      row.push({})
-    }
-    this.board.push(row)
-  }
+  this.clear_actions()
 }
 
 Board.prototype.draw_grid = function(ctx) {
@@ -107,7 +101,7 @@ Board.prototype.draw = function(ctx, show_opponent_markers) {
           ctx.lineTo(x + this.squareWidth/4*Math.cos(dir), y + this.squareWidth/4*Math.sin(dir))
           ctx.lineWidth = 3;
            if(boardSquare.opponent_player) {
-             ctx.strokeStyle = "green"
+             ctx.strokeStyle = this.get_player_color(boardSquare.opponent_player)
            } else {
              ctx.strokeStyle = "red"
            }
@@ -167,6 +161,17 @@ Board.prototype.opponent_miss = function(loc, player, dir) {
   }
 }
 
+Board.prototype.clear_actions = function() {
+  this.board = []
+  for(var i = 0; i < this.rows; i++) {
+    var row = []
+    for(var j = 0; j < this.cols; j++) {
+      row.push({})
+    }
+    this.board.push(row)
+  }
+}
+
 Board.prototype.get_player_color = function(player) {
-  return "#00ff00"
+  return this.gamestate.cids_to_color[player]
 }
