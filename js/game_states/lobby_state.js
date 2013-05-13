@@ -22,10 +22,13 @@ function LobbyState() {
   })
 
   this.state = "unknown"
+
+  title_container.style.display = "none"
+  log_container.style.display = "none"
 }
 
 LobbyState.prototype.destroy = function() {
-  io.removeListener('status', process_players(data))
+  io.removeListener('status')
 }
 
 LobbyState.prototype.draw = function(ctx, bg_ctx) {

@@ -23,6 +23,10 @@ var clients = {}
 var game_players = {}
 
 var state = "idle"
+
+var game_status = "none"
+
+var game_state = {}
  
 // Listen for incoming connections from clients
 sio.sockets.on('connection', function (socket) {
@@ -40,12 +44,18 @@ sio.sockets.on('connection', function (socket) {
 
     socket.on("start game", function(data) {
       if(state == "idle") {
-      console.log("STARTING GAME")
         state = "game_in_progress"
+        game_status = "placing_ships"
         start_game()
       }
-
     })
+
+    socket.on("placing ships", function(data) {
+      if(state == "game_in_progress" && game_status == "placing_ships") {
+        process_place_ships(data, socket.handshake.sessionID)
+      }
+    })
+
     socket.on('disconnect', function () {
       clients[socket.handshake.sessionID].pop(socket.handshake.sessionID);
       console.log('DISCONNESSO!!! '+socket.handshake.sessionID);
@@ -59,12 +69,150 @@ function start_game() {
   
   for(var sessionid in clients) {
     game_players[sessionid] = {
-    cid: id_counter
-      
+      cid: id_counter,
+      ships: [null, null, null, null, null]
     }
     id_counter += 1
   }
+
+  /*game_state = {
+    board: []
+  }
+  for(var i = 0; i < 15; i++) {
+    var row = []
+    for(var j = 0; j < 15; j++) {
+      row.push({
+        cid: -1,
+        shipid: -1
+      })
+    }
+    game_state.board.push(row)
+  }*/
   send_start_game_to_players()
+}
+
+function start_battle() {
+  game_status = "battle"
+  game_state = {
+    board: []
+  }
+  for(var i = 0; i < 15; i++) {
+    var row = []
+    for(var j = 0; j < 15; j++) {
+      row.push({
+        cid: -1,
+        shipid: -1
+      })
+    }
+    game_state.board.push(row)
+  }
+  for(sessionid in game_players) {
+    for(j in game_players[sessionid].ships) {
+      var ship = game_players[sessionid].ships[j]
+      var locs = get_ship_locs(ship)
+
+      for(var i in locs) {
+        var loc = locs[i]
+        game_state.board[loc.x][loc.y] = {
+          cid:  game_players[sessionid].cid,
+          shipid: ship.ship_id
+        }
+      }
+    }
+  }
+  //initialize server
+
+  /*sio.sockets.clients().forEach(function (socket) {
+    console.log("EMITTING START BATTLE TO CLIENT")
+    socket.emit("play battleship", {
+  });*/
+}
+
+}
+
+function process_place_ships(data, this_sessionid) {
+  var ships_to_be_redone = {
+
+  }
+
+  for(var sessionid in game_players) {
+    ships_to_be_redone[sessionid] = []
+  }
+
+  if(game_players.hasOwnProperty(this_sessionid)) {
+    console.log("PLACING SHIPS")
+    for(i in data.ships) {
+      var this_ship = data.ships[i]
+      var valid = true
+      for(sessionid in game_players) {
+        for(j in game_players[sessionid].ships) {
+          var ship = game_players[sessionid].ships[j]
+          // if it intersects a ship
+          if(ship != null && intersects_ship(ship, this_ship)) {
+            console.log("COLLISION BETWEEN "+JSON.stringify(ship)+" "+JSON.stringify(this_ship))
+            ships_to_be_redone[sessionid].push(j)
+            ships_to_be_redone[this_sessionid].push(i)
+            // invalidate the ship
+            game_players[sessionid].ships[j] = null
+            valid = false
+          }
+        }
+      }
+      if(valid) {
+        game_players[this_sessionid].ships[i] = this_ship
+      }
+    }
+  }
+
+  var done = true
+
+  for(var sessionid in game_players) {
+    if(ships_to_be_redone[sessionid].length > 0) {
+      send_message_to_client_with_id(sessionid, "replace_ship", {bad_ship_ids: ships_to_be_redone[sessionid]})
+    }
+  }
+
+
+}
+
+function intersects_ship(ship_one, ship_two) {
+  var loc_one = get_ship_locs(ship_one)
+  var loc_two = get_ship_locs(ship_two)
+
+  for(var i in loc_one) {
+    for(var j in loc_two) {
+      if(loc_one[i].x == loc_two[j].x && loc_one[i].y == loc_two[j].y) {
+        return true
+      }
+    }
+  }
+  return false
+}
+
+function get_ship_locs(ship) {
+  var locs = []
+  if(ship.dir == "vert") {
+    for(var i = 0; i < ship.length; i++) {
+      locs.push({x:ship.topLeftLoc.x,y: ship.topLeftLoc.y + i})
+    }
+  } else if(ship.dir == "horiz") {
+    for(var i = 0; i < ship.length; i++) {
+      locs.push({x:ship.topLeftLoc.x + i,y: ship.topLeftLoc.y})
+    }
+  }
+  return locs;
+}
+
+
+
+function send_message_to_client_with_id(sessionid, type, data) {
+  sio.sockets.clients().forEach(function (socket) {
+
+    if(socket.handshake.sessionID == sessionid) {
+      socket.emit(type, data)
+    }
+  });
+
 }
 
 function send_start_game_to_players() {

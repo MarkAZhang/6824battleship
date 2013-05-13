@@ -3,7 +3,7 @@
 
 //OBJECTS
 function ClientPacket(startTime, actionObjects, versionVector, cid){
-  var time=new Date.getTime()/1000;
+  var time=new Date().getTime()/1000;
   this.currentTime=time-startTime;
   this.actionObjects=actionObjects;
   this.versionVector;
@@ -18,7 +18,7 @@ function ActionObject(cid, type, data, committed){
   this.committed=committed;
 
   function setTimestamp(startTime){
-    var time=new Date.getTime()/1000;
+    var time=new Date().getTime()/1000;
     this.timestamp=time-startTime;
   }
 }
@@ -42,7 +42,7 @@ function Client(numPlayers, io, cid){
   this.lastCommitted=0;
     
   this.gameState=null;
-  this.serverTime=currentTime;
+  this.startTime = 0
   
   this.versionVector=new Array();
   //initialize version vector

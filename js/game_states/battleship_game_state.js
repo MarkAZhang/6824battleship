@@ -21,6 +21,10 @@ function BattleshipGameState(cid, numPlayers) {
 
   print("Place ships by dragging and dropping. SPACEBAR to rotate ship. ENTER to confirm")
 
+  title_container.style.display = "block"
+  log_container.style.display = "block"
+  var _this = this;
+  io.on("replace_ship", function(data) {replace_ship(data, _this)});
 }
 
 BattleshipGameState.prototype.opponent_fire = function() {
@@ -48,7 +52,7 @@ BattleshipGameState.prototype.opponent_fire = function() {
 BattleshipGameState.prototype.add_ships_initial = function() {
 
   for( i in this.ship_lengths) {
-    this.board.add_ship(new Ship(new Loc(2*i, 0), this.ship_lengths[i], "vert", this.board))
+    this.board.add_ship(new Ship(new Loc(2*i, 0), this.ship_lengths[i], "vert", this.board, i+1))
   }
 }
 
@@ -116,11 +120,20 @@ BattleshipGameState.prototype.on_key_down = function(keyCode) {
     this.current_ship.flip()
   }
   if(keyCode == 13 && this.current_phase == "placing_ships") {
-    this.current_phase = "battle"
-    this.change_firing_ship(0)
+
+    //this.current_phase = "battle"
+    //this.change_firing_ship(0)
     var _this = this;
     //setTimeout(function(){_this.opponent_fire()}, 1000)
-    io.emit('placing ships', this.board.player_ships)
+
+    var ships = []
+
+    for(i in this.board.player_ships) {
+      var ship = this.board.player_ships[i];
+      ships.push(ship.objectify())
+    }
+
+    io.emit('placing ships', {ships: ships})
     print("DOUBLE CLICK to fire. Hold SPACEBAR to show visible enemy attacks.")
   }
 
@@ -198,6 +211,9 @@ BattleshipGameState.prototype.change_firing_ship = function(index) {
   }
 }
 
+function replace_ship(data, gamestate) {
+  console.log("ASKED TO REPLACE SHIP "+data.bad_ship_ids)
+}
 
 var _atan = function(center, ray) {
   var angle
