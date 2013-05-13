@@ -73,7 +73,7 @@ function BSServer(gameBoard, ships) {
     this.lastClientTimes = new Array();
     this.receivedActions = new Array();
     this.shipArray = new Array();
-    this.timeRef = null;
+    this.timeRef = new Date().getTime();
     this.DC_THRESHOLD = 10000;
     this.gameOver = false;
     this.initGame = initGame;
@@ -181,6 +181,7 @@ var getLogIndex = function(time, lo, hi) {
     console.log("GET LOG INDEX "+time+" "+lo+" "+hi);
     var i = Math.floor((lo + hi)/2);
     var midpoint = this.log[i]; 
+    console.log("LOG ENTRY INDEX="+i+" "+midpoint.action+" "+midpoint.gamestate)
     if (midpoint.action.timestamp === time) {
         return i; 
     } else if ((hi-lo) === 1) {
@@ -262,6 +263,8 @@ var receiveDataFromClient = function(clientPacket, socket) {
     //handle -1 case
     //send srvPacket to client
 
+    console.log("SENDING RESPONSE TO CLIENT-------------------")
+
     socket.emit("server response", {
       serverPacket: srvPacket
     })
@@ -286,9 +289,9 @@ var retrieveLogEntriesForClient = function(verVector, cID, timestamp) {
     var index = this.getLogIndex(minTS, 0, this.log.length);
     var logEntry = this.log[index];
     while (logEntry && logEntry.action.timestamp <= timestamp) {
-        if (vector[logEntry.action.data.cid] <= logEntry.action.timestamp) {
+        if (vector[logEntry.action.cid] <= logEntry.action.timestamp) {
             logEntries.concat(logEntry);    
-            vector[logEntry.action.data.cid] = logEntry.action.timestamp;
+            vector[logEntry.action.cid] = logEntry.action.timestamp;
         }
         index++
         logEntry = this.log[index];
@@ -308,7 +311,7 @@ var retrieveLogEntriesForClient = function(verVector, cID, timestamp) {
 
 var replayLog = function(clientTime, actionArray) {
 
-    console.log("REPLAY LOG")
+    console.log("REPLAY LOG WITH ACTION ARRAY "+JSON.stringify(actionArray))
     
     var date = new Date()
     var time = date.getTime();
@@ -324,15 +327,16 @@ var replayLog = function(clientTime, actionArray) {
     } 
     var actionIndex = 0;
     //remove early/illegal objects
-
+    console.log("REMOVING ILLEGAL OBJECTS")
     if(actionArray.length == 0) {
       return false
     }
-    while (actionArray[actionIndex].timestamp <= this.lastClientTimes[actionArray[actionIndex].data.cid]) {
+    while (actionArray[actionIndex].timestamp <= this.lastClientTimes[actionArray[actionIndex].cid]) {
         if (this.isActionReceived(actionArray[actionIndex])) {
             actionIndex += 1;
             continue;
         } 
+        console.log("REMOVED ILLEGAL OBJECT")
         actionArray[actionIndex].timestamp = date.getTime() - this.timeRef;
         this.invalidateActionObject(actionArray[actionIndex]);
         var entry = new LogEntry(actionArray[actionIndex], null);
@@ -347,6 +351,7 @@ var replayLog = function(clientTime, actionArray) {
     }
 
     //only legal objects left in array
+    console.log("GETTING LOCATION IN LOG FOR FIRST LEGAL OBJECT")
 
     var minTS = actionArray[actionIndex].timestamp;
 
@@ -361,10 +366,12 @@ var replayLog = function(clientTime, actionArray) {
     }
 
     var minTSindex = this.getLogIndex(minTS, 0, this.log.length);
-    var currentGameState = this.log[minTSindex-1].gameState; 
+    var currentGameState = this.log[minTSindex].gameState; 
     var logIndex = minTSindex;
 
-    while (actionArray[actionIndex].timestamp <= Math.min(clientTime, time - this.timeRef)) {
+    console.log("REPLAYING LOG")
+    while (actionArray[actionIndex] && actionArray[actionIndex].timestamp <= Math.min(clientTime, time - this.timeRef)) {
+      console.log("FAST FORWARDING, CURRENT INDEX="+actionIndex)
         if (this.isActionReceived(actionArray[actionIndex])) {
             actionIndex += 1;
             continue;
@@ -374,19 +381,22 @@ var replayLog = function(clientTime, actionArray) {
             actionArray[actionIndex].timestamp = clientTime;
         }
 
-        while (this.log[logIndex].action.timestamp < actionArray[actionIndex].timestamp) {
+        while (this.log[logIndex] && this.log[logIndex].action.timestamp < actionArray[actionIndex].timestamp) {
             // get proper syntax for revision checking
             if (this.log[logIndex].action.revision === false) {
                 var ok = this.updateGameState(logIndex,currentGameState);
                 currentGameState = this.log[logIndex].gameState;
-                logIndex += 1;
             }
+            logIndex += 1;
         }
+
         //now apply the current action object that we got out of the actionArray
         //and insert the new entry into that location
+        console.log("APPLYING, CURRENT INDEX="+actionIndex)
         
         var appliedAction = this.apply(actionArray[actionIndex], currentGameState);
-        var entry = new LogEntry(appliedAction[0], appliedAction[1]);
+        var entry = new LogEntry(actionArray[actionIndex], appliedAction[1]);
+        console.log("ADDING NEW LOG "+actionArray[actionIndex])
         
         var log1 = this.log.slice(0, logIndex+1);
         var log2 = this.log.slice(logIndex+1, this.log.length);
@@ -399,6 +409,8 @@ var replayLog = function(clientTime, actionArray) {
 
         actionIndex += 1;
     } 
+
+    console.log("FAST FORWARD TO END")
     while (logIndex < this.log.length) {
         if (this.log[logIndex].action.revision === false) {
             var ok = this.updateGameState(logIndex, currentGameState);
@@ -406,6 +418,8 @@ var replayLog = function(clientTime, actionArray) {
             logIndex += 1;
         }
     }    
+
+    console.log("REMOVING BAD OBJECTS AFTER LOG")
     for (var j = actionIndex; j < actionArray.length; j++) {
         if (this.isActionReceived(actionArray[j])){
             j += 1;
@@ -453,7 +467,7 @@ var apply = function(action, gameState) {
     var targetX = action.loc.x
     var targetY = action.loc.y
 
-    var sourceID = shipHash(action.data.ship_id, action.data.cid);
+    var sourceID = shipHash(action.data.ship_id, action.cid);
     var source = this.shipArray[sourceID];
     
     //check if source is even still alive
@@ -465,7 +479,7 @@ var apply = function(action, gameState) {
     }   
     
     var target = gameState[targetX][targetY];
-    if (target.cid === action.data.cid) {
+    if (target.cid === action.cid) {
         rtnArray[0] = null;
         rtnArray[1] = newGameState;
         return rtnArray;
@@ -493,7 +507,7 @@ var apply = function(action, gameState) {
                 newGameState[targetX][targetY].hit = true;
                 newGameState[targetX][targetY].shotLocX = source.topLeftLoc.x + source.length/2;
                 newGameState[targetX][targetY].shotLocY = source.topLeftLoc.y + source.length/2;
-                newGameState[targetX][targetY].shotcid= action.data.cid;
+                newGameState[targetX][targetY].shotcid= action.cid;
             }
 
             this.gameOver = true;

@@ -25,7 +25,7 @@ function ActionObject(cid, type, data, committed){
   this.objType=type;
   this.committed=committed;
 
-  function setTimestamp(startTime){
+  this.setTimestamp = function(startTime){
     var time=new Date().getTime();
     this.timestamp=time-startTime;
   }
