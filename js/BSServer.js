@@ -339,8 +339,14 @@ var retrieveLogEntriesForClient = function(verVector, cID, timestamp) {
     }
     var index = this.getLogIndex(minTS, 0, this.log.length);
     var logEntry = this.log[index];
+    //don't duplicate
+    while(logEntry && logEntry.action.timestamp == minTS) {
+      index++
+      logEntry = this.log[index]
+    }
+
     while (logEntry && logEntry.action.timestamp <= timestamp) {
-        if (vector[logEntry.action.cid] < logEntry.action.timestamp) {
+        if (vector[logEntry.action.cid] <= logEntry.action.timestamp) {
             logEntries.push(logEntry);    
             vector[logEntry.action.cid] = logEntry.action.timestamp;
         }
@@ -496,7 +502,7 @@ var updateGameState = function(index, currentGameState) {
         var date = new Date();
         appliedAction[0].timestamp = date.getTime() - this.timeRef;
         var entry = new LogEntry(appliedAction[0], appliedAction[1]);
-        this.log.concat(entry);
+        this.log.push(entry);
     }            
 
     this.log[index].gameState = appliedAction[1];
@@ -508,7 +514,7 @@ function clone_gamestate(gameState) {
   for(var i = 0; i < 15; i++) {
     var row = []
     for(var j = 0; j < 15; j++) {
-      var sq = gameState[i][j]
+      var sq = gameState.gameBoard[i][j]
       row.push({
         cid: sq.cid,
         shipid: sq.shipid,
@@ -550,12 +556,15 @@ function clone_action(action) {
   new_action.data = new_data
 
   return new_action
-
+}
 function clone_ship_array(shipArray) {
     var newShipArray = {};
 
     for (var shipid in shipArray) {
-        newShipArray[shipid] = shipArray[shipid];   
+        newShipArray[shipid] = {}
+        for(var i in shipArray[shipid]) {
+          newShipArray[shipid][i] = shipArray[shipid][i]
+        }
     }
     return newShipArray; 
 }
@@ -599,19 +608,17 @@ var apply = function(action, gameState, shots_fired) {
 
 
     //fired too many shots
-    if(new_shots_fired[action.cid] + 1 > action.timestamp/1000) {
-        console.log("INVALID: FIRED TOO MANY SHOTS")
+    if(newGameState.shotsFired[action.cid] + 1 > action.timestamp/1000) {
         action.result = "invalidated";
         rtnArray[0] = null;
         rtnArray[1] = newGameState;
         return rtnArray;
     }
     if (target.shipid !== null) {
-        console.log("SHIP IS HIT")
         //a ship has been hit
         action.result = "hit"
         var targetID = shipHash(target.shipid, target.cid);
-        var ship = gameState.shipArray[targetID];
+        var ship =newGameState.shipArray[targetID];
         if (ship.isAlive !== 0) {
             //target is not dead, determine if it's a true hit
             //or if square has already been hit
@@ -622,13 +629,11 @@ var apply = function(action, gameState, shots_fired) {
             } else {
                 offset = targetX - ship.topLeftLoc.x;
             }
-            console.log("SHIP IS ALIVE "+ship.isAlive+" "+(1<<offset));
             var mask = 1<<offset;
             var beenHit = ship.isAlive & mask;
             ship.isAlive = ship.isAlive & (~mask);
           
             if (beenHit !== 0) {
-              console.log("MODIFYING FOR HIT")
                 newGameState.gameBoard[targetX][targetY].hit = true;
                 newGameState.gameBoard[targetX][targetY].shotLocX = source.topLeftLoc.x;
                 newGameState.gameBoard[targetX][targetY].shotLocY = source.topLeftLoc.y;
@@ -662,7 +667,6 @@ var apply = function(action, gameState, shots_fired) {
             //what do we do - hit or miss?
         }
     } else {
-      console.log("SHIP IS MISSED")
       action.result = "miss"
       newGameState.gameBoard[targetX][targetY].hit = false;
 
