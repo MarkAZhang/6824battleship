@@ -70,6 +70,7 @@ function BSServer(gameBoard, ships) {
     // Server fields 
     this.log = new Array();  
     this.lastClientTimes = {};
+    this.shotsFired = {};
     this.receivedActions = {};
     this.shipArray = {};
     this.timeRef = new Date().getTime();
@@ -91,16 +92,18 @@ function BSServer(gameBoard, ships) {
     this.initGame(gameBoard, ships);
 }
 
-function ServerPacket(entries, time, vector, gameState) {
+function ServerPacket(entries, time, vector, gameState, shots_left) {
     this.actionObjectArray = entries;
     this.currentTime = time;
     this.versionVector = vector;
     this.gameState = gameState;
+    this.shots_left = shots_left
 }
 
-function LogEntry(action, gameState) {
+function LogEntry(action, gameState, shots_fired) {
     this.action = action;
     this.gameState = gameState;
+    this.shots_fired = shots_fired
 }
 
 function Ship(topLeftLoc, length, dir) {
@@ -127,7 +130,10 @@ function Ship(topLeftLoc, length, dir) {
 
 
 var initGame = function(gameBoard, ships) {
+
+    var shots_fired = {}
     //format gameboard[x][y] 15x15;
+
     for (var cID in ships) {
         var ship_set = ships[cID];
         for(var index in ship_set) {
@@ -135,11 +141,14 @@ var initGame = function(gameBoard, ships) {
           this.shipArray[shipHash(ship.ship_id,cID)] = new Ship(ship.topLeftLoc, ship.length, ship.dir); 
 
         }
+        shots_fired[cID] = 0
     }
 
     var action = new ActionObject(0, null, null, null);
     action.timestamp = -10;
-    var entry = new LogEntry(action, gameBoard);
+
+
+    var entry = new LogEntry(action, gameBoard, shots_fired);
     this.log[0] = entry; 
 }
 
@@ -215,6 +224,9 @@ var insertLogEntry = function(entry) {
         if (entry.gameState === null) {
             this.log[index].gameState = this.log[index-1].gameState;
         }
+        if (entry.shots_fired === null) {
+          this.log[index].shots_fired = this.log[index-1].shots_fired
+        }
     } else {
         var log1 = this.log.slice(0, index+1);
         var log2 = this.log.slice(index+1, this.log.length);
@@ -226,6 +238,9 @@ var insertLogEntry = function(entry) {
 
         if (entry.gameState === null) {
             this.log[index+1].gameState = this.log[index].gameState; 
+        }
+        if (entry.shots_fired=== null) {
+            this.log[index+1].shots_fired = this.log[index].shots_fired; 
         }
     }
     
@@ -247,7 +262,12 @@ var receiveDataFromClient = function(clientPacket, socket) {
     var actionObjArr = clientPacket.actionObjects;
     var clientTime = clientPacket.currentTime;
     var vector = clientPacket.versionVector;
-//make sure received actions gets updated
+    //make sure received actions gets updated
+
+    //initialize shots fired
+    if(!this.shotsFired.hasOwnProperty(cID)) {
+      this.shotsFired[cID] = 0
+    }
 
     //update Server state
     this.replayLog(clientTime, actionObjArr);
@@ -261,13 +281,13 @@ var receiveDataFromClient = function(clientPacket, socket) {
     console.log("CHOSEN INDEX "+i)
     var packagedEntries = []
 
-    for(var i in logEntries[0]){ 
-      logEntry = logEntries[0][i]
+    for(var j in logEntries[0]){ 
+      logEntry = logEntries[0][j]
       packagedEntries.push(logEntry.action)
     }
 
     //TODO: remove ship locs from gamestate below
-    var srvPacket = new ServerPacket(packagedEntries, time, logEntries[1], this.log[i].gameState);  
+    var srvPacket = new ServerPacket(packagedEntries, time, logEntries[1], this.log[i].gameState, Math.floor(clientTime/1000 - this.log[i].shots_fired[cID]));  
        
     //handle -1 case
     //send srvPacket to client
@@ -341,10 +361,7 @@ var replayLog = function(clientTime, actionArray) {
     //if disconnected for too long
     if (clientTime < time - this.timeRef - this.DC_THRESHOLD) {
         for (var i = 0; i < actionArray.length; i++) {
-            actionArray[i].timestamp = time - this.timeRef;
             this.invalidateActionObject(actionArray[i]);
-            var entry = new LogEntry(actionArray[i], null);
-            var ok = this.insertLogEntry(entry);
         }
         return
     } 
@@ -357,11 +374,7 @@ var replayLog = function(clientTime, actionArray) {
     while (actionArray[actionIndex].timestamp <= this.lastClientTimes[actionArray[actionIndex].cid]) {
         //first check if already received
         console.log("REMOVED ILLEGAL OBJECT")
-        actionArray[actionIndex].timestamp = date.getTime() - this.timeRef;
         this.invalidateActionObject(actionArray[actionIndex]);
-        var entry = new LogEntry(actionArray[actionIndex], null);
-        var ok = this.insertLogEntry(entry);
-        
         actionIndex += 1;
         
         if (actionIndex >= actionArray.length) {
@@ -373,10 +386,7 @@ var replayLog = function(clientTime, actionArray) {
     console.log("GETTING LOCATION IN LOG FOR FIRST LEGAL OBJECT")
 
     var minTS = actionArray[actionIndex].timestamp;
-    console.log("MINTS: "+minTS+ " clientTime " + clientTime + " diff "+ (time - this.timeRef))
-    if (minTS > Math.min(clientTime, time - this.timeRef)) {
-        return false;
-    }
+//    console.log("MINTS: "+minTS+ " clientTime " + clientTime + " diff "+ (time - this.timeRef))
 
     var disconnectedTooLong = false;
     if (minTS <= time - this.timeRef - this.DC_THRESHOLD) {
@@ -386,6 +396,7 @@ var replayLog = function(clientTime, actionArray) {
 
     var minTSindex = this.getLogIndex(minTS, 0, this.log.length);
     var currentGameState = this.log[minTSindex].gameState; 
+    var shots_fired = this.log[minTSindex].shots_fired; 
     var logIndex = minTSindex+1;
 
     console.log("REPLAYING LOG")
@@ -400,8 +411,9 @@ var replayLog = function(clientTime, actionArray) {
         while (this.log[logIndex] && this.log[logIndex].action.timestamp < actionArray[actionIndex].timestamp) {
             // get proper syntax for revision checking
             if (this.log[logIndex].action.revision === false) {
-                var ok = this.updateGameState(logIndex,currentGameState);
+                var ok = this.updateGameState(logIndex,currentGameState, shots_fired);
                 currentGameState = this.log[logIndex].gameState;
+                shots_fired = this.log[logIndex].shots_fired
             }
             logIndex += 1;
         }
@@ -410,8 +422,8 @@ var replayLog = function(clientTime, actionArray) {
         //and insert the new entry into that location
         console.log("APPLYING, CURRENT INDEX="+actionIndex)
         
-        var appliedAction = this.apply(actionArray[actionIndex], currentGameState);
-        var entry = new LogEntry(actionArray[actionIndex], appliedAction[1]);
+        var appliedAction = this.apply(actionArray[actionIndex], currentGameState, shots_fired);
+        var entry = new LogEntry(actionArray[actionIndex], appliedAction[1], appliedAction[2]);
 
         console.log("ADDING NEW LOG "+actionArray[actionIndex])
         console.log("logIndex+1 "+ (logIndex+1)+" log.length "+ this.log.length);
@@ -426,6 +438,7 @@ var replayLog = function(clientTime, actionArray) {
         this.log = log1;
         console.log("LOG ENTRY "+ this.log[logIndex+1]);
         currentGameState = appliedAction[1];
+        shots_fired = appliedAction[2]
         logIndex += 1;
 
         actionIndex += 1;
@@ -434,18 +447,16 @@ var replayLog = function(clientTime, actionArray) {
     console.log("FAST FORWARD TO END")
     while (logIndex < this.log.length) {
         if (this.log[logIndex].action.revision === false) {
-            var ok = this.updateGameState(logIndex, currentGameState);
+            var ok = this.updateGameState(logIndex, currentGameState, shots_fired);
             currentGameState = this.log[logIndex].gameState;
+            shots_fired = this.log[logIndex].shots_fired;
             logIndex += 1;
         }
     }    
 
     console.log("REMOVING BAD OBJECTS AFTER LOG")
     for (var j = actionIndex; j < actionArray.length; j++) {
-        actionArray[j].timestamp = date.getTime() - this.timeRef;
         this.invalidateActionObject(actionArray[j]);
-        var entry = new LogEntry(actionArray[j], null);
-        var ok = this.insertLogEntry(entry);
         
         j += 1;
     }
@@ -453,8 +464,8 @@ var replayLog = function(clientTime, actionArray) {
     console.log("LOG END LENGTH "+this.log.length)
 }
 
-var updateGameState = function(index, currentGameState) {
-    var appliedAction = this.apply(this.log[index].action, currentGameState);
+var updateGameState = function(index, currentGameState, shotsFired) {
+    var appliedAction = this.apply(this.log[index].action, currentGameState, shotsFired);
 
     //take a second look at this revision append to the end of the log
 
@@ -465,21 +476,56 @@ var updateGameState = function(index, currentGameState) {
         
         var date = new Date();
         appliedAction[0].timestamp = date.getTime() - this.timeRef;
-        var entry = new LogEntry(appliedAction[0], appliedAction[1]);
+        var entry = new LogEntry(appliedAction[0], appliedAction[1], appliedAction[2]);
         this.log.concat(entry);
     }            
 
     this.log[index].gameState = appliedAction[1];
+    this.log[index].shots_fired = appliedAction[2]
     return true;
 } 
 
-var apply = function(action, gameState) {
+function clone_gamestate(gameState) {
+  var new_game_state = []
+  for(var i = 0; i < 15; i++) {
+    var row = []
+    for(var j = 0; j < 15; j++) {
+      var sq = gameState[i][j]
+      row.push({
+        cid: sq.cid,
+        shipid: sq.shipid,
+        hit: sq.hit,
+        shotLocX: sq.shotLocX,
+        shotLocY: sq.shotLocY,
+        shotcid: sq.shotcid
+      })
+    }
+    new_game_state.push(row)
+  }
+  return new_game_state
+
+}
+
+function clone_shots_fired(shots_fired) {
+  var new_shots_fired = {}
+    //format gameboard[x][y] 15x15;
+
+    for (var cID in shots_fired) {
+        new_shots_fired[cID] = shots_fired[cID]
+    }
+    return new_shots_fired
+}
+
+var apply = function(action, gameState, shots_fired) {
+    console.log("APPLYING")
     var rtnArray = new Array();
-    var newGameState = gameState;
+    var newGameState = clone_gamestate(gameState);
+    var new_shots_fired = clone_shots_fired(shots_fired)
 
     if (action.result === "invalidated") {
         rtnArray[0] = null;
         rtnArray[1] = newGameState;
+        rtnArray[2] = new_shots_fired;
         return rtnArray;
     }
     var targetX = action.data.loc.x
@@ -493,13 +539,26 @@ var apply = function(action, gameState) {
         action.result = "invalidated";
         rtnArray[0] = action;
         rtnArray[1] = newGameState;
+        rtnArray[2] = new_shots_fired;
         return rtnArray;
     }   
     
     var target = gameState[targetX][targetY];
     if (target.cid === action.cid) {
+        action.result = "invalidated";
         rtnArray[0] = null;
         rtnArray[1] = newGameState;
+        rtnArray[2] = new_shots_fired;
+        return rtnArray;
+    }
+
+
+    //fired too many shots
+    if(new_shots_fired[action.cid] + 1 > action.timestamp/1000) {
+        action.result = "invalidated";
+        rtnArray[0] = null;
+        rtnArray[1] = newGameState;
+        rtnArray[2] = new_shots_fired;
         return rtnArray;
     }
     if (target.shipid !== null) {
@@ -524,8 +583,13 @@ var apply = function(action, gameState) {
           
             if (beenHit !== 0) {
                 newGameState[targetX][targetY].hit = true;
-                newGameState[targetX][targetY].shotLocX = source.topLeftLoc.x + source.length/2;
-                newGameState[targetX][targetY].shotLocY = source.topLeftLoc.y + source.length/2;
+                newGameState[targetX][targetY].shotLocX = source.topLeftLoc.x;
+                newGameState[targetX][targetY].shotLocY = source.topLeftLoc.y;
+                if(source.dir == "vert") {
+                  newGameState[targetX][targetY].shotLocY += source.length/2;
+                } else if(source.dir == "horiz") {
+                  newGameState[targetX][targetY].shotLocX += source.length/2;
+                }
                 newGameState[targetX][targetY].shotcid= action.cid;
             }
 
@@ -553,17 +617,31 @@ var apply = function(action, gameState) {
     } else {
       action.result = "miss"
       newGameState[targetX][targetY].hit = false;
-      newGameState[targetX][targetY].shotLocX = source.topLeftLoc.x + source.length/2;
-      newGameState[targetX][targetY].shotLocY = source.topLeftLoc.y + source.length/2;
+
+      newGameState[targetX][targetY].shotLocX = source.topLeftLoc.x;
+      newGameState[targetX][targetY].shotLocY = source.topLeftLoc.y;
+      if(source.dir == "vert") {
+        newGameState[targetX][targetY].shotLocY += source.length/2;
+      } else if(source.dir == "horiz") {
+        newGameState[targetX][targetY].shotLocX += source.length/2;
+      }
       newGameState[targetX][targetY].shotcid= action.cid;
+
     }
+    new_shots_fired[action.cid] += 1
+    console.log("SHOTS FIRED FOR CID="+action.cid+" SHOTS="+new_shots_fired[action.cid]+" TIME="+(action.timestamp/1000))
     
     rtnArray[0] = action;
     rtnArray[1] = newGameState;
+    rtnArray[2] = new_shots_fired
 
     return rtnArray;
 }
 
-var invalidateActionObject = function(action) {
+var invalidateActionObject = function(action, time) {
     action.result = "invalidated";
+    action.revision = true
+    action.timestamp = new Date().getTime() - this.timeRef // set to serverTime
+    var entry = new LogEntry(action, null, null);
+    var ok = this.insertLogEntry(entry);
 }

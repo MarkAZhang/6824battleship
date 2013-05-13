@@ -141,6 +141,8 @@ function Client(numPlayers, io, cid, cids, bgamestate){
     }
     this.versionVector=serverPacket.versionVector;
     this.gameState=serverPacket.gameState;
+
+    this.bgamestate.shots_left = serverPacket.shots_left
     
     for (index in serverPacket.actionObjectArray){
       var actionObject = serverPacket.actionObjectArray[index]

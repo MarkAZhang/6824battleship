@@ -40,6 +40,7 @@ window.onload = function() {
   title_container.style.height = boardHeight + 'px';
 
   players_container =  document.getElementById("players_container");
+  shots_left_container =  document.getElementById("shots_left");
   ctx = canvas.getContext('2d');
   bg_ctx = bg_canvas.getContext('2d');
 

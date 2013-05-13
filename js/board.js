@@ -42,13 +42,12 @@ Board.prototype.draw = function(ctx, show_opponent_markers) {
       if(boardSquare.status) {
         
         if(boardSquare.status == "hit") {
-          if(boardSquare.player) {
+          if(boardSquare.opponent_player) {
             ctx.beginPath()
             ctx.rect(i * this.squareWidth, j * this.squareHeight, this.squareWidth, this.squareWidth);
-            ctx.fillStyle = this.get_player_color(boardSquare.player)
+            ctx.fillStyle = this.get_player_color(boardSquare.opponent_player)
             ctx.fill()
           }
-
           if(!show_opponent_markers) {
 
             ctx.beginPath()
@@ -129,7 +128,7 @@ Board.prototype.get_ship_at = function(loc) {
 
 Board.prototype.hit = function(loc, player) {
   this.board[loc.x][loc.y].status = "hit"
-  this.board[loc.x][loc.y].player = player
+  this.board[loc.x][loc.y].opponent_player = player
 }
 
 Board.prototype.miss = function(loc) {

@@ -11,7 +11,7 @@ function BattleshipGameState(cid, numPlayers, cids, ships_placed, offset) {
 
   this.cid = cid
 
-  this.other_player_colors = ["sienna", "mediumvioletred", "mediumslateblue", "green", "orangered"]
+  this.other_player_colors = ["sienna", "mediumvioletred", "green", "orangered"]
 
   this.drag_start_loc = null
 
@@ -22,8 +22,10 @@ function BattleshipGameState(cid, numPlayers, cids, ships_placed, offset) {
   this.generate_colors(cids)
 
   this.add_players_to_ui()
+  this.shots_left = 0
 
   this.client=new Client(numPlayers, io, cid, cids, this);
+  this.shot_reload_timer = 1000
 
   print("Place ships by dragging and dropping. SPACEBAR to rotate ship. ENTER to confirm")
 
@@ -88,10 +90,8 @@ BattleshipGameState.prototype.opponent_fire = function() {
     if(this.board.get_ship_at(random_loc)) {
 
       this.board.opponent_hit(random_loc, "Bob", angle)
-      print("Opponent has HIT you at ("+random_loc.x+","+random_loc.y+")")
     } else {
       this.board.opponent_miss(random_loc, "Bob", angle)
-      print("Opponent has MISSED at ("+random_loc.x+","+random_loc.y+")")
     }
     
   }
@@ -124,6 +124,13 @@ BattleshipGameState.prototype.create_next_player_ship = function() {
 }
 
 BattleshipGameState.prototype.update = function(dt) {
+ this.shot_reload_timer -= dt 
+  if(this.shot_reload_timer < 0) {
+    this.shot_reload_timer = 1000
+    this.shots_left += 1
+  }
+  shots_left_container.innerHTML = this.shots_left
+
 
 }
 
@@ -285,7 +292,7 @@ BattleshipGameState.prototype.update_ui = function() {
       if(gamestate[i][j].shotcid != null) {
         if(gamestate[i][j].shotcid == this.cid) {
           if(gamestate[i][j].hit) {
-            this.board.hit(new Loc(i, j))
+            this.board.hit(new Loc(i, j), gamestate[i][j].shotcid)
           } else {
             this.board.miss(new Loc(i, j))
           }
@@ -303,10 +310,29 @@ BattleshipGameState.prototype.update_ui = function() {
     }
   }
 
-  console.log("HERE")
+  this.update_log_container()
+}
 
-
-
+BattleshipGameState.prototype.update_log_container = function() {
+  var newLogEntries = this.client.getNewLogEntries();
+  for(var i in newLogEntries) {
+    var newLogEntry = newLogEntries[i];
+    if(newLogEntry.cid == this.cid) {
+      if(newLogEntry.result == "hit") {
+        print("You have HIT at ("+newLogEntry.data.loc.x+","+newLogEntry.data.loc.y+")")
+      } else if(newLogEntry.result == "miss") {
+        print("You have MISSED at ("+newLogEntry.data.loc.x+","+newLogEntry.data.loc.y+")")
+      } else if(newLogEntry.result == "invalidated") {
+        print("Your shot at ("+newLogEntry.data.loc.x+","+newLogEntry.data.loc.y+") has been invalidated. Your ship had been killed before it fired that shot.")
+      }
+    } else {
+      if(newLogEntry.result == "hit") {
+        print("Player "+newLogEntry.cid+" has HIT at ("+newLogEntry.data.loc.x+","+newLogEntry.data.loc.y+")")
+      } else if(newLogEntry.result == "miss") {
+        print("Player "+newLogEntry.cid+" has MISSED at ("+newLogEntry.data.loc.x+","+newLogEntry.data.loc.y+")")
+      }
+    }
+  }
 }
 
 function replace_ship(data, gamestate) {
