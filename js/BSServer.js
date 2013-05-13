@@ -63,6 +63,7 @@ function List() {
 //*************************************************
 
 ActionObject = require("./client").ActionObject
+GameState = require("./client").GameState
 
 exports.BSServer = BSServer
 
@@ -70,12 +71,11 @@ function BSServer(gameBoard, ships) {
     // Server fields 
     this.log = new Array();  
     this.lastClientTimes = {};
-    this.shotsFired = {};
     this.receivedActions = {};
-    this.shipArray = {};
     this.timeRef = new Date().getTime();
     this.DC_THRESHOLD = 100000000//10000;
     this.gameOver = false;
+    this.winner = -1;
     this.initGame = initGame;
     this.unreliable = false;
     this.unreliablePercentage = 0;
@@ -106,10 +106,9 @@ function ServerPacket(entries, time, vector, gameState, shots_left) {
     this.shots_left = shots_left
 }
 
-function LogEntry(action, gameState, shots_fired) {
+function LogEntry(action, gameState) {
     this.action = action;
     this.gameState = gameState;
-    this.shots_fired = shots_fired
 }
 
 function Ship(topLeftLoc, length, dir) {
@@ -145,13 +144,14 @@ var setLag = function(lag, lagTime){
 var initGame = function(gameBoard, ships) {
 
     var shots_fired = {}
+    var shipArray = {}
     //format gameboard[x][y] 15x15;
 
     for (var cID in ships) {
         var ship_set = ships[cID];
         for(var index in ship_set) {
           var ship = ship_set[index]
-          this.shipArray[shipHash(ship.ship_id,cID)] = new Ship(ship.topLeftLoc, ship.length, ship.dir); 
+          shipArray[shipHash(ship.ship_id,cID)] = new Ship(ship.topLeftLoc, ship.length, ship.dir); 
 
         }
         shots_fired[cID] = 0
@@ -160,22 +160,12 @@ var initGame = function(gameBoard, ships) {
     var action = new ActionObject(0, null, null, null);
     action.timestamp = -10;
 
+    var gameState = new GameState(gameBoard, shipArray, shots_fired); 
 
-    var entry = new LogEntry(action, gameBoard, shots_fired);
+    var entry = new LogEntry(action, gameState);
     this.log[0] = entry; 
 }
 
-var startNewGame = function() {
-
-    //when we start a new game, input the first entry into the log
-    //which should be the initial game state and a null actionObject
-    //with a timestamp of -10,000 so that no action can precede
-    //it. we use that value because it is always less than
-    //serverTime - DC_THRESHOLD 
-    
-
-
-}
 
 // return hash of actionObjects
 var actionHash = function(action) {
@@ -237,9 +227,6 @@ var insertLogEntry = function(entry) {
         if (entry.gameState === null) {
             this.log[index].gameState = this.log[index-1].gameState;
         }
-        if (entry.shots_fired === null) {
-          this.log[index].shots_fired = this.log[index-1].shots_fired
-        }
     } else {
         var log1 = this.log.slice(0, index+1);
         var log2 = this.log.slice(index+1, this.log.length);
@@ -251,9 +238,6 @@ var insertLogEntry = function(entry) {
 
         if (entry.gameState === null) {
             this.log[index+1].gameState = this.log[index].gameState; 
-        }
-        if (entry.shots_fired=== null) {
-            this.log[index+1].shots_fired = this.log[index].shots_fired; 
         }
     }
     
@@ -268,7 +252,10 @@ var isActionReceived = function(action) {
 }
 
 var receiveDataFromClient = function(clientPacket, socket) {
-    
+    if (this.gameOver === true) {
+        socket.emit("game over", {cid: this.winner});
+    }   
+
     if (this.unreliable && Math.random() < this.unreliablePercentage){
         console.log("Dropped client packet");
         return false;
@@ -283,10 +270,10 @@ var receiveDataFromClient = function(clientPacket, socket) {
     var vector = clientPacket.versionVector;
     //make sure received actions gets updated
 
-    //initialize shots fired
+/*    //initialize shots fired
     if(!this.shotsFired.hasOwnProperty(cID)) {
       this.shotsFired[cID] = 0
-    }
+    }*/
 
     //update Server state
     this.replayLog(clientTime, actionObjArr);
@@ -306,7 +293,7 @@ var receiveDataFromClient = function(clientPacket, socket) {
     }
 
     //TODO: remove ship locs from gamestate below
-    var srvPacket = new ServerPacket(packagedEntries, time, logEntries[1], this.log[i].gameState, Math.floor(clientTime/1000 - this.log[i].shots_fired[cID]));  
+    var srvPacket = new ServerPacket(packagedEntries, time, logEntries[1], this.log[i].gameState, Math.floor(clientTime/1000 - this.log[i].gameState.shotsFired[cID]));  
        
     //handle -1 case
     //send srvPacket to client
@@ -428,7 +415,6 @@ var replayLog = function(clientTime, actionArray) {
 
     var minTSindex = this.getLogIndex(minTS, 0, this.log.length);
     var currentGameState = this.log[minTSindex].gameState; 
-    var shots_fired = this.log[minTSindex].shots_fired; 
     var logIndex = minTSindex+1;
 
     console.log("REPLAYING LOG")
@@ -443,9 +429,8 @@ var replayLog = function(clientTime, actionArray) {
         while (this.log[logIndex] && this.log[logIndex].action.timestamp < actionArray[actionIndex].timestamp) {
             // get proper syntax for revision checking
             if (this.log[logIndex].action.revision === false) {
-                var ok = this.updateGameState(logIndex,currentGameState, shots_fired);
+                var ok = this.updateGameState(logIndex,currentGameState);
                 currentGameState = this.log[logIndex].gameState;
-                shots_fired = this.log[logIndex].shots_fired
             }
             logIndex += 1;
         }
@@ -454,8 +439,8 @@ var replayLog = function(clientTime, actionArray) {
         //and insert the new entry into that location
         console.log("APPLYING, CURRENT INDEX="+actionIndex)
         
-        var appliedAction = this.apply(actionArray[actionIndex], currentGameState, shots_fired);
-        var entry = new LogEntry(actionArray[actionIndex], appliedAction[1], appliedAction[2]);
+        var appliedAction = this.apply(actionArray[actionIndex], currentGameState);
+        var entry = new LogEntry(actionArray[actionIndex], appliedAction[1]);
 
         console.log("ADDING NEW LOG "+actionArray[actionIndex])
         console.log("logIndex+1 "+ (logIndex+1)+" log.length "+ this.log.length);
@@ -470,7 +455,6 @@ var replayLog = function(clientTime, actionArray) {
         this.log = log1;
         console.log("LOG ENTRY "+ this.log[logIndex+1]);
         currentGameState = appliedAction[1];
-        shots_fired = appliedAction[2]
         logIndex += 1;
 
         actionIndex += 1;
@@ -479,9 +463,8 @@ var replayLog = function(clientTime, actionArray) {
     console.log("FAST FORWARD TO END")
     while (logIndex < this.log.length) {
         if (this.log[logIndex].action.revision === false) {
-            var ok = this.updateGameState(logIndex, currentGameState, shots_fired);
+            var ok = this.updateGameState(logIndex, currentGameState);
             currentGameState = this.log[logIndex].gameState;
-            shots_fired = this.log[logIndex].shots_fired;
             logIndex += 1;
         }
     }    
@@ -496,8 +479,8 @@ var replayLog = function(clientTime, actionArray) {
     console.log("LOG END LENGTH "+this.log.length)
 }
 
-var updateGameState = function(index, currentGameState, shotsFired) {
-    var appliedAction = this.apply(this.log[index].action, currentGameState, shotsFired);
+var updateGameState = function(index, currentGameState) {
+    var appliedAction = this.apply(this.log[index].action, currentGameState);
 
     //take a second look at this revision append to the end of the log
 
@@ -508,17 +491,16 @@ var updateGameState = function(index, currentGameState, shotsFired) {
         
         var date = new Date();
         appliedAction[0].timestamp = date.getTime() - this.timeRef;
-        var entry = new LogEntry(appliedAction[0], appliedAction[1], appliedAction[2]);
+        var entry = new LogEntry(appliedAction[0], appliedAction[1]);
         this.log.concat(entry);
     }            
 
     this.log[index].gameState = appliedAction[1];
-    this.log[index].shots_fired = appliedAction[2]
     return true;
 } 
 
 function clone_gamestate(gameState) {
-  var new_game_state = []
+  var new_game_board = []
   for(var i = 0; i < 15; i++) {
     var row = []
     for(var j = 0; j < 15; j++) {
@@ -532,8 +514,12 @@ function clone_gamestate(gameState) {
         shotcid: sq.shotcid
       })
     }
-    new_game_state.push(row)
+    new_game_board.push(row)
   }
+  var new_shots_fired = clone_shots_fired(gameState.shotsFired);
+  var new_ship_array = clone_ship_array(gameState.shipArray);
+  
+  var new_game_state = new GameState(new_game_board,new_ship_array,new_shots_fired);
   return new_game_state
 
 }
@@ -548,39 +534,48 @@ function clone_shots_fired(shots_fired) {
     return new_shots_fired
 }
 
+<<<<<<< HEAD
+function clone_ship_array(shipArray) {
+    var newShipArray = {};
+
+    for (var shipid in shipArray) {
+        newShipArray[shipid] = shipArray[shipid];   
+    }
+    return newShipArray; 
+}
+=======
+function clone_action
+>>>>>>> 16ed5ee6c5b9ab95b3fe277ddfd312b13b5d34a4
+
 var apply = function(action, gameState, shots_fired) {
     console.log("APPLYING")
     var rtnArray = new Array();
     var newGameState = clone_gamestate(gameState);
-    var new_shots_fired = clone_shots_fired(shots_fired)
 
     if (action.result === "invalidated") {
         rtnArray[0] = null;
         rtnArray[1] = newGameState;
-        rtnArray[2] = new_shots_fired;
         return rtnArray;
     }
     var targetX = action.data.loc.x
     var targetY = action.data.loc.y
 
     var sourceID = shipHash(action.data.ship_id, action.cid);
-    var source = this.shipArray[sourceID];
+    var source = gameState.shipArray[sourceID];
     
     //check if source is even still alive
     if (source.isAlive === 0) {
         action.result = "invalidated";
         rtnArray[0] = action;
         rtnArray[1] = newGameState;
-        rtnArray[2] = new_shots_fired;
         return rtnArray;
     }   
     
-    var target = gameState[targetX][targetY];
+    var target = gameState.gameBoard[targetX][targetY];
     if (target.cid === action.cid) {
         action.result = "invalidated";
         rtnArray[0] = null;
         rtnArray[1] = newGameState;
-        rtnArray[2] = new_shots_fired;
         return rtnArray;
     }
 
@@ -590,14 +585,13 @@ var apply = function(action, gameState, shots_fired) {
         action.result = "invalidated";
         rtnArray[0] = null;
         rtnArray[1] = newGameState;
-        rtnArray[2] = new_shots_fired;
         return rtnArray;
     }
     if (target.shipid !== null) {
         //a ship has been hit
         action.result = "hit"
         var targetID = shipHash(target.shipid, target.cid);
-        var ship = this.shipArray[targetID];
+        var ship = gameState.shipArray[targetID];
         if (ship.isAlive !== 0) {
             //target is not dead, determine if it's a true hit
             //or if square has already been hit
@@ -614,30 +608,30 @@ var apply = function(action, gameState, shots_fired) {
             ship.isAlive = ship.isAlive & (~mask);
           
             if (beenHit !== 0) {
-                newGameState[targetX][targetY].hit = true;
-                newGameState[targetX][targetY].shotLocX = source.topLeftLoc.x;
-                newGameState[targetX][targetY].shotLocY = source.topLeftLoc.y;
+                newGameState.gameBoard[targetX][targetY].hit = true;
+                newGameState.gameBoard[targetX][targetY].shotLocX = source.topLeftLoc.x;
+                newGameState.gameBoard[targetX][targetY].shotLocY = source.topLeftLoc.y;
                 if(source.dir == "vert") {
-                  newGameState[targetX][targetY].shotLocY += source.length/2;
+                  newGameState.gameBoard[targetX][targetY].shotLocY += source.length/2;
                 } else if(source.dir == "horiz") {
-                  newGameState[targetX][targetY].shotLocX += source.length/2;
+                  newGameState.gameBoard[targetX][targetY].shotLocX += source.length/2;
                 }
-                newGameState[targetX][targetY].shotcid= action.cid;
+                newGameState.gameBoard[targetX][targetY].shotcid= action.cid;
             }
 
             this.gameOver = true;
 
             if (ship.isAlive === 0) {
                 //ship died, check if game over 
-                var cid = -1;
-                for (var hash in this.shipArray) {
-                    if (this.shipArray[hash].isAlive !== 0) {
+                this.winner = -1;
+                for (var hash in gameState.shipArray) {
+                    if (gameState.shipArray[hash].isAlive !== 0) {
                         //a ship that's alive
-                        if (cid !== -1 && cid !== shipReverseHash(hash)) {
+                        if (this.winner !== -1 && this.winner !== shipReverseHash(hash)) {
                             this.gameOver = false;
                             break;
                         }
-                        cid = shipReverseHash(hash); 
+                        this.winner = shipReverseHash(hash); 
                     }
                 }
             }
@@ -648,32 +642,31 @@ var apply = function(action, gameState, shots_fired) {
         }
     } else {
       action.result = "miss"
-      newGameState[targetX][targetY].hit = false;
+      newGameState.gameBoard[targetX][targetY].hit = false;
 
-      newGameState[targetX][targetY].shotLocX = source.topLeftLoc.x;
-      newGameState[targetX][targetY].shotLocY = source.topLeftLoc.y;
+      newGameState.gameBoard[targetX][targetY].shotLocX = source.topLeftLoc.x;
+      newGameState.gameBoard[targetX][targetY].shotLocY = source.topLeftLoc.y;
       if(source.dir == "vert") {
-        newGameState[targetX][targetY].shotLocY += source.length/2;
+        newGameState.gameBoard[targetX][targetY].shotLocY += source.length/2;
       } else if(source.dir == "horiz") {
-        newGameState[targetX][targetY].shotLocX += source.length/2;
+        newGameState.gameBoard[targetX][targetY].shotLocX += source.length/2;
       }
-      newGameState[targetX][targetY].shotcid= action.cid;
+      newGameState.gameBoard[targetX][targetY].shotcid= action.cid;
 
     }
-    new_shots_fired[action.cid] += 1
-    console.log("SHOTS FIRED FOR CID="+action.cid+" SHOTS="+new_shots_fired[action.cid]+" TIME="+(action.timestamp/1000))
+    newGameState.shotsFired[action.cid] += 1
+    console.log("SHOTS FIRED FOR CID="+action.cid+" SHOTS="+newGameState.shotsFired[action.cid]+" TIME="+(action.timestamp/1000))
     
     rtnArray[0] = null;
     rtnArray[1] = newGameState;
-    rtnArray[2] = new_shots_fired
 
     return rtnArray;
 }
 
-var invalidateActionObject = function(action, time) {
+var invalidateActionObject = function(action) {
     action.result = "invalidated";
     action.revision = true
     action.timestamp = new Date().getTime() - this.timeRef // set to serverTime
-    var entry = new LogEntry(action, null, null);
+    var entry = new LogEntry(action, null);
     var ok = this.insertLogEntry(entry);
 }

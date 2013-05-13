@@ -5,7 +5,7 @@ if(typeof exports === "undefined") {
 debug_time = false
 
 exports.ActionObject = ActionObject
-
+exports.GameState = GameState
 
 //<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
 //<script src="/socket.io/socket.io.js"></script>
@@ -33,6 +33,11 @@ function ActionObject(cid, type, data, committed){
   }
 }
 
+function GameState(gameBoard, shipArray, shotsFired) {
+    this.gameBoard = gameBoard;
+    this.shipArray = shipArray;
+    this.shotsFired = shotsFired;
+}
 
 //function Client(numPlayers, io, cid){
 // we don't need other servers. The central server will handle that for us. We only communicate with central server.
@@ -147,7 +152,7 @@ function Client(numPlayers, io, cid, cids, bgamestate){
       console.log("DEBUG")
     }
     this.versionVector=serverPacket.versionVector;
-    this.gameState=serverPacket.gameState;
+    this.gameState=serverPacket.gameState.gameBoard;
 
     this.bgamestate.shots_left = serverPacket.shots_left
     
