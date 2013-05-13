@@ -15,21 +15,42 @@ var Ship = function Ship(topLeftLoc, length, dir, board, id) {
   this.bcolor = "black"
   this.ship_id = id
   this.isAlive = (1<<length) - 1
+  this.status = "unknown"
 }
 
 Ship.prototype.draw = function(ctx, color, bColor) {
 
-  ctx.fillStyle = this.color
+  ctx.save()
   ctx.strokeStyle = this.bColor
   ctx.lineWidth = 3
   ctx.beginPath()
 
-  if(this.dir == "horiz")
+  if(this.dir == "horiz") {
+    ctx.fillStyle = "white"
+    ctx.fillText(this.ship_id, this.board.squareWidth * this.topLeftLoc.x + this.length/2 * this.board.squareWidth, this.board.squareHeight * this.topLeftLoc.y + this.board.squareHeight/2) 
+    ctx.beginPath()
     ctx.rect(this.board.squareWidth * this.topLeftLoc.x, this.board.squareHeight * this.topLeftLoc.y, this.length * this.board.squareWidth, this.board.squareHeight)
-  else if(this.dir == "vert")
+
+  } else if(this.dir == "vert") {
+    ctx.fillStyle = "white"
+    ctx.fillText(this.ship_id, this.board.squareWidth * this.topLeftLoc.x + this.board.squareWidth/2, this.board.squareHeight * this.topLeftLoc.y + this.length/2 * this.board.squareHeight)
+    ctx.beginPath()
     ctx.rect(this.board.squareWidth * this.topLeftLoc.x, this.board.squareHeight * this.topLeftLoc.y, this.board.squareWidth, this.length * this.board.squareHeight)
+  }
+
+
+  ctx.fillStyle = this.color
+  if(this.status == "unknown") {
+    ctx.globalAlpha = 0.7
+  }
+  if(this.status == "conflict") {
+    ctx.fillStyle = "red"
+    ctx.globalAlpha = 0.5
+  }
+
   ctx.fill()
   ctx.stroke()
+  ctx.restore()
 }
 
 Ship.prototype.valid = function() {

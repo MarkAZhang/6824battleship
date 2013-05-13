@@ -14,7 +14,7 @@ function ClientPacket(startTime, actionObjects, versionVector, cid){
   var time=new Date().getTime()/1000;
   this.currentTime=time-startTime;
   this.actionObjects=actionObjects;
-  this.versionVector;
+  this.versionVector = versionVector;
   this.cid=cid;
 }
 
@@ -25,7 +25,7 @@ function ActionObject(cid, type, data, committed){
   this.objType=type;
   this.committed=committed;
 
-  function setTimestamp(startTime){
+  this.setTimestamp = function(startTime){
     var time=new Date().getTime()/1000;
     this.timestamp=time-startTime;
   }
@@ -53,23 +53,24 @@ function Client(numPlayers, io, cid){
   this.startTime = 0;
   
   this.versionVector=new Array();
+
   //initialize version vector
   for (var i=0; i<this.numPlayers; i++){
     this.versionVector[i]=0;
   }
-  function setStartTime(){
+  this.setStartTime = function(){
     this.startTime=new Date().getTime()/1000;
   }
   
   //Adds actionobject to client queue with uuid and sets timestamp of action
-  function sendAction(object, uuid){
+  this.sendAction = function(object, uuid){
     object.uuid=uuid;
     object.setTimestamp(this.startTime);
     this.queue.push(object);
   }
 
   //If the server has not yet responded, actions returns the same object that was passed into sendAction(). If the server has responded, the object will be modified. The object may change several times if the action changes several times on the server due to reconnects.
-  function getUpdatedActionObject(uuid){
+  this.getUpdatedActionObject = function(uuid){
     if (responses[uuid]==false){
       for(var i=0; i<this.queue.length; i++){
         if(this.queue[i].uuid==auuid){
@@ -86,13 +87,13 @@ function Client(numPlayers, io, cid){
     }
   }
   //Returns an array of all objects that are in the message queue. Allows the application to access actions that have not been recognized by the server yet.
-  function getMessageQueue(){
+  this.getMessageQueue = function(){
     return this.queue;
   }
 
   //returns all log entries that have been added to the log since the last call to getNewLogEntries()
 
-  function getNewLogEntries() {
+  this.getNewLogEntries = function() {
     temp=this.lastCall;
     this.lastCall=this.log.length;
     
@@ -103,7 +104,7 @@ function Client(numPlayers, io, cid){
   //Note that the client does not necessarily receive log entries from the server in chronological order (due to re-connects). If a new log entry is inserted into the middle of the log, getLastLogEntries might not return it, but getNewLogEntries definitely will.
 
 
-  function getLastLogEntries(n) {
+  this.getLastLogEntries = function(n) {
     if( n<0 || n> this.log.length){
       return this.log;
     }
@@ -114,16 +115,16 @@ function Client(numPlayers, io, cid){
 
   //    this method is called once every second. It creates a client-packet (see below) containing the actions that need to be sent and other relevant info, and then sends it to the server.
 
-  function sendActionsToServer(client) {
+  this.sendActionsToServer = function(client) {
     var data=new Object();
 
-    console.log(data.clientPacket)
     data.clientPacket=new ClientPacket(client.startTime, client.queue, client.versionVector, client.cid)
+    console.log(data.clientPacket)
     client.io.emit('send action', data);
 
   }
   //    this method is called whenever a client receives a server-packet containing data from the server. The method will update all the client data structures based on the new info from the server.
-  function receiveDataFromServer(serverPacket) {
+  this.receiveDataFromServer = function(serverPacket) {
     console.log('Start processing server response');
     this.versionVector=serverPacket.versionVector;
     this.gameState=serverPacket.gameState;
@@ -169,15 +170,15 @@ function Client(numPlayers, io, cid){
     //this.serverTime=serverPacket.currentTime;
   }
 
-  function getGameState(){
+  this.getGameState = function(){
     return this.gameState;
   }
 
+  var _this = this
   this.io.on('server response', function(data){
-    receiveDataFromServer(data.serverPacket);
+    _this.receiveDataFromServer(data.serverPacket);
   })
 
-  var _this = this
-  var tick=setInterval(function(){sendActionsToServer(_this)},1000);
+  var tick=setInterval(function(){_this.sendActionsToServer(_this)},1000);
   
 }

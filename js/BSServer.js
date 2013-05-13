@@ -133,7 +133,7 @@ var initGame = function(gameBoard, ships) {
         this.shipArray[shipHash(ship.ship_id,cID)] = ship; 
     }
 
-    var action = new ActionObject();
+    var action = new ActionObject(0, null, null, null);
     action.timestamp = -10;
     var entry = new LogEntry(action, gameBoard);
     this.log[0] = entry; 
@@ -178,17 +178,18 @@ var shipReverseHash = function(hash) {
 //
 // return index
 var getLogIndex = function(time, lo, hi) {
+    console.log("GET LOG INDEX "+time+" "+lo+" "+hi);
     var i = Math.floor((lo + hi)/2);
     var midpoint = this.log[i]; 
     if (midpoint.action.timestamp === time) {
         return i; 
-    } else if ((lo-hi) === 1) {
+    } else if ((hi-lo) === 1) {
         return lo;
     } else {
         if (midpoint.action.timestamp > time) {
-            return this.getLogIndex(time, lo, midpoint); 
+            return this.getLogIndex(time, lo, i); 
         } else {
-            return this.getLogIndex(time, midpoint, hi); 
+            return this.getLogIndex(time, i, hi); 
         }
     }
 };
@@ -237,6 +238,8 @@ var isActionReceived = function(action) {
 }
 
 var receiveDataFromClient = function(clientPacket, socket) {
+
+    console.log("UNPACKING CLIENT PACKET")
     //unpack Client information
     var cID = clientPacket.cid;
     var actionObjArr = clientPacket.actionObjects;
@@ -253,7 +256,8 @@ var receiveDataFromClient = function(clientPacket, socket) {
     var date = new Date();
     var time = date.getTime() - this.timeRef;
     var i = this.getLogIndex(clientTime, 0, this.log.length);
-    var srvPacket = new ServerPacket(logEntries[0], time, logEntries[1], logEntries[i-1].gameState);  
+    console.log("CHOSEN INDEX "+i)
+    var srvPacket = new ServerPacket(logEntries[0], time, logEntries[1], this.log[i].gameState);  
        
     //handle -1 case
     //send srvPacket to client
@@ -264,6 +268,9 @@ var receiveDataFromClient = function(clientPacket, socket) {
 }
 
 var retrieveLogEntriesForClient = function(verVector, cID, timestamp) {
+
+    console.log("RETRIEVING LOG")
+    console.log("LOG LENGTH "+this.log.length)
     var vector = new Array();
     var logEntries = new Array();
     for (var i = 0; i < verVector.length; i++) {
@@ -278,12 +285,13 @@ var retrieveLogEntriesForClient = function(verVector, cID, timestamp) {
     }
     var index = this.getLogIndex(minTS, 0, this.log.length);
     var logEntry = this.log[index];
-    while (logEntry.action.timestamp <= timestamp) {
+    while (logEntry && logEntry.action.timestamp <= timestamp) {
         if (vector[logEntry.action.cID] <= logEntry.action.timestamp) {
             logEntries.concat(logEntry);    
-            vector[logEntry.action.clientID] = logEntry.action.timestamp;
+            vector[logEntry.action.cID] = logEntry.action.timestamp;
         }
-        logEntry = this.log[index + 1];
+        index++
+        logEntry = this.log[index];
     }
 
     //make sure each version vector has a time no lower than the DC_Threshold 
@@ -299,6 +307,9 @@ var retrieveLogEntriesForClient = function(verVector, cID, timestamp) {
 }   
 
 var replayLog = function(clientTime, actionArray) {
+
+    console.log("REPLAY LOG")
+    
     var date = new Date()
     var time = date.getTime();
     

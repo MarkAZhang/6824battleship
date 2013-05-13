@@ -23,6 +23,8 @@ function BattleshipGameState(cid, numPlayers, ships_placed) {
   var _this = this;
   io.on("replace_ship", function(data) {replace_ship(data, _this)});
   io.on("play battleship", function(data) {
+    print("THE BATTLE HAS BEGUN!")
+    print("DOUBLE CLICK to fire. Hold SPACEBAR to show visible enemy attacks.")
     _this.current_phase = "battle"
     _this.change_firing_ship(0)
       
@@ -66,7 +68,7 @@ BattleshipGameState.prototype.opponent_fire = function() {
 BattleshipGameState.prototype.add_ships_initial = function() {
 
   for( i in this.ship_lengths) {
-    this.board.add_ship(new Ship(new Loc(2*i, 0), this.ship_lengths[i], "vert", this.board, i+1))
+    this.board.add_ship(new Ship(new Loc(2*i, 0), this.ship_lengths[i], "vert", this.board, parseInt(i)+1))
   }
 }
 
@@ -89,19 +91,14 @@ BattleshipGameState.prototype.update = function(dt) {
 }
 
 BattleshipGameState.prototype.draw = function(ctx, bg_ctx) {
-  ctx.save()
 
   if(!bg_initialized) {
     this.draw_bg_grid(bg_ctx)
     bg_initialized = true
   }
 
-  if(this.current_phase == "placing_ships")
-    ctx.globalAlpha = 0.7
-
   this.board.draw(ctx, this.show_opponent_markers)
   ctx.globalAlpha = 1
-  ctx.restore()
 }
 
 BattleshipGameState.prototype.draw_bg_grid = function(bg_ctx) {
@@ -126,7 +123,13 @@ BattleshipGameState.prototype.on_mouse_move = function(pos) {
 BattleshipGameState.prototype.on_mouse_down = function(pos) {
   if(this.current_phase == "placing_ships") {
     this.current_ship = this.board.get_ship_at(this.board.translate_coord_to_grid(pos))
-    this.drag_last_loc = this.board.translate_coord_to_grid(pos)
+    if(this.current_ship.status != "set") {
+      if(this.current_ship.status == "conflict") {
+        this.current_ship.status = "unknown"
+      }
+      this.drag_last_loc = this.board.translate_coord_to_grid(pos)
+      
+    }
   } else if(this.current_phase == "battle") {
 
   }
@@ -152,10 +155,11 @@ BattleshipGameState.prototype.on_key_down = function(keyCode) {
     for(i in this.board.player_ships) {
       var ship = this.board.player_ships[i];
       ships.push(ship.objectify())
+      ship.status = "set"
     }
 
     io.emit('placing ships', {ships: ships})
-    print("DOUBLE CLICK to fire. Hold SPACEBAR to show visible enemy attacks.")
+    print("Placed ships. Waiting for other players.")
   }
 
   if(keyCode == 81) {
@@ -175,7 +179,6 @@ BattleshipGameState.prototype.on_key_down = function(keyCode) {
 
 BattleshipGameState.prototype.on_key_up = function(keyCode) {
 
-  console.log("UP "+keyCode)
   if(this.current_phase == "battle") {
     if(keyCode == 32) {
       this.show_opponent_markers = false;
@@ -196,9 +199,10 @@ BattleshipGameState.prototype.on_mouse_dbl_click  = function(pos) {
       this.board.fired(loc)
       print("FIRED at ("+loc.x+","+loc.y+"). Awaiting result.");
       var data=new Object();
-      data.current_ship=this.current_ship;
+      data.ship_id=this.current_ship.ship_id;
       data.loc=loc;
       data.cid=this.client.cid;
+      data.result = "fired"
 
       var actionObject=new ActionObject(0, 'initial',data,false);
       this.client.sendAction(actionObject, Math.random())
@@ -233,7 +237,14 @@ BattleshipGameState.prototype.change_firing_ship = function(index) {
 }
 
 function replace_ship(data, gamestate) {
+  print("Someone's ships overlapped with yours. You've both been asked to re-place your ships. ")
+  print("Place re-place the red ships")
   console.log("ASKED TO REPLACE SHIP "+data.bad_ship_ids)
+  for(var i in data.bad_ship_ids) {
+    var index = data.bad_ship_ids[i];
+    var ship = gamestate.board.player_ships[index];
+    ship.status = "conflict"
+  }
 }
 
 var _atan = function(center, ray) {
