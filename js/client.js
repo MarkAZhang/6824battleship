@@ -42,7 +42,7 @@ function Client(numPlayers, io, cid){
   this.lastCommitted=0;
     
   this.gameState=null;
-  this.startTime = 0
+  this.startTime = 0;
   
   this.versionVector=new Array();
   //initialize version vector
@@ -106,10 +106,10 @@ function Client(numPlayers, io, cid){
 
   //    this method is called once every second. It creates a client-packet (see below) containing the actions that need to be sent and other relevant info, and then sends it to the server.
 
-  function sendActionsToServer() {
+  function sendActionsToServer(client) {
     var data=new Object();
-    data.clientPacket=new ClientPacket(this.startTime, this.queue, this.versionVector, this.cid)
-    this.io.emit('send action', data);
+    data.clientPacket=new ClientPacket(client.startTime, client.queue, client.versionVector, client.cid)
+    client.io.emit('send action', data);
 
   }
   //    this method is called whenever a client receives a server-packet containing data from the server. The method will update all the client data structures based on the new info from the server.
@@ -166,6 +166,8 @@ function Client(numPlayers, io, cid){
   this.io.on('server response', function(data){
     receiveDataFromServer(data.serverPacket);
   })
-  var tick=setInterval(function(){sendActionsToServer()},1000);
+
+  var _this = this
+  var tick=setInterval(function(){sendActionsToServer(_this)},1000);
   
 }
